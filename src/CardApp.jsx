@@ -28,16 +28,17 @@ export default function CardApp() {
 
   const handleCreate = () => {
     if (input.question != '' && input.answer != '') {
-      index = Date.now();
-      setCards([...cards, {
-        id: index,
+      const newCard = {
+        id: Date.now(),
         question: input.question.trim(),
         answer: input.answer.trim(),
         hidden: false,
-      }]);
-      changeActiveCard({...cards.filter(card => card.id == index), flipped: false});
+      };
+      console.log(newCard);
+      setCards([...cards, newCard]);
+      changeActiveCard({...newCard, flipped: false});
       setModalFade(false);
-      setInput({question: '', answer: ''})
+      setInput({question: '', answer: ''});
       setTimeout(() => {
         setModal(false);
       }, 150);
@@ -85,9 +86,6 @@ export default function CardApp() {
             </div>
           ) : (
             <div onClick={() => changeActiveCard({...activeCard, flipped: !activeCard.flipped})} className='card-style-button'>
-              <button onClick={() => toggleCard(activeCard.id)} className={`checkbox ${activeCard.hidden ? 'checkbox-completed' : ''}`} >
-                {activeCard.hidden && <Check size={16} className="check-icon" />}
-              </button>
               <p className='card-text'>
                 {activeCard.flipped ? activeCard.answer : activeCard.question}
               </p>
