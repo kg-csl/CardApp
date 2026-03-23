@@ -143,12 +143,6 @@ body {
   cursor: pointer;
 }
 
-/* Hover State */
-.card-style-button:hover {
-  background-color: #f9fafb; /* Matches card-item:hover style */
-}
-
-
 .card-item:hover {
   background-color: #f9fafb;
 }
