@@ -34,7 +34,6 @@ export default function CardApp() {
         answer: input.answer.trim(),
         hidden: false,
       };
-      console.log(newCard);
       setCards([...cards, newCard]);
       changeActiveCard({...newCard, flipped: false});
       setModalFade(false);
@@ -85,14 +84,21 @@ export default function CardApp() {
               <p className="header-subtitle">No flashcards yet. Add one above!</p>
             </div>
           ) : (
-            <div onClick={() => changeActiveCard({...activeCard, flipped: !activeCard.flipped})} className='card-style-button'>
-              <p className='card-text'>
-                {activeCard.flipped ? activeCard.answer : activeCard.question}
-              </p>
-              <button onClick={() => deleteCard(activeCard.id)} className='delete-button' >
-                <Trash2 size={18} />
-              </button>
-            </div>
+            <ul className="card-items">
+              {cards.map((card) => (
+                <li key={card.id} className={`card-item ${card.hidden && 'card-completed'}`}>
+                  <button onClick={() => toggleCard(card.id)} className={`checkbox ${card.hidden ? '' : 'checkbox-completed'}`} >
+                    {!card.hidden && <Check size={16} className="check-icon" />}
+                  </button>
+                  <p className='card-text'>
+                    {card.flipped ? card.answer : card.question}
+                  </p>
+                  <button onClick={() => deleteCard(card.id)} className='delete-button' >
+                    <Trash2 size={18} />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

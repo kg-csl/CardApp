@@ -130,7 +130,7 @@ body {
   list-style: none;
 }
 
-.card-style-button {
+.card-item {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -140,11 +140,10 @@ body {
   border-radius: 0;
   color: #1f2937;
   font-size: 1.05rem;
-  cursor: pointer;
 }
 
 .card-item:hover {
-  background-color: #f9fafb;
+  background-color: #f1f1f1;
 }
 
 .card-item:last-child {
@@ -167,12 +166,12 @@ body {
 }
 
 .checkbox:hover {
-  border-color: #667eea;
+  border-color: #a925d5;
 }
 
 .checkbox-completed {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #a925d5 0%, #df0000 100%);
+  border-color: #df0000;
 }
 
 .check-icon {
@@ -183,7 +182,6 @@ body {
 .card-text {
   flex: 1;
   color: #1f2937;
-  background: white;
   font-size: 1.05rem;
   padding: 0.875rem 1.5rem;
   border: none;
@@ -191,11 +189,7 @@ body {
 
 .card-completed {
   text-decoration: line-through;
-  color: #9ca3af;
-}
-
-.card-text.disabled {
-  opacity: 0.5;
+  opacity: 0.75;
 }
 
 /* Disabled State for Buttons */
