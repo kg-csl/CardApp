@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Trash2, Plus, Check } from 'lucide-react';
+import { Trash2, Plus, Check, Shuffle, CircleCheckBig, CircleChevronLeft, CircleChevronRight } from 'lucide-react';
 import './CardApp.css';
 
 export default function CardApp() {
   const [cards, setCards] = useState([]);
-  const [activeCard, changeActiveCard] = useState({
+  const [activeCard, setActiveCard] = useState({
     id: 0,
     question: '',
     answer: '',
@@ -18,8 +18,6 @@ export default function CardApp() {
     question: '',
     answer: ''
   });
-
-  let index = 0;
 
   const addCard = () => {
     setModalFade(true);
@@ -35,7 +33,7 @@ export default function CardApp() {
         hidden: false,
       };
       setCards([...cards, newCard]);
-      changeActiveCard({...newCard, flipped: false});
+      setActiveCard({...newCard, flipped: false});
       setModalFade(false);
       setInput({question: '', answer: ''});
       setTimeout(() => {
@@ -70,38 +68,56 @@ export default function CardApp() {
           <p className="header-subtitle">Keagan's POTI Project!</p>
         </div>
 
-        <div className="input-section">
-          <button onClick={addCard} className="add-button">
-            <Plus size={20} />
-            Add
-          </button>
-        </div>
+        {cards == 0 ? (
+          <div className="empty-box">
+            <div className="empty-icon">📝</div>
+            <p className="header-subtitle">No flashcards yet. Add one below!</p>
+          </div>
+        ) : (
+          <div onClick={() => setActiveCard({...activeCard, flipped: !activeCard.flipped})} className="active-box">
+            <button onClick={() => {setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) - 1])}} className="edit-button" disabled={cards.findIndex(card => card.id == activeCard.id) == 0}>
+              <CircleChevronLeft size={35} />
+            </button>
+            <p className="main-text">{activeCard.flipped ? activeCard.answer : activeCard.question}</p>
+            <button onClick={() => {setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) + 1])}} className="edit-button" disabled={cards.findIndex(card => card.id == activeCard.id) == cards.length - 1}>
+              <CircleChevronRight size={35} />
+            </button>
+          </div>
+        )}
 
         <div className="card-list">
-          {cards.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">📝</div>
-              <p className="header-subtitle">No flashcards yet. Add one above!</p>
-            </div>
-          ) : (
-            <ul className="card-items">
-              {cards.map((card) => (
-                <li key={card.id} className={`card-item ${card.hidden && 'card-completed'}`}>
-                  <button onClick={() => toggleCard(card.id)} className={`checkbox ${card.hidden ? '' : 'checkbox-completed'}`} >
-                    {!card.hidden && <Check size={16} className="check-icon" />}
-                  </button>
-                  <p className='card-text'>
-                    {card.flipped ? card.answer : card.question}
-                  </p>
-                  <button onClick={() => deleteCard(card.id)} className='delete-button' >
-                    <Trash2 size={18} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="input-section">
+            <button onClick={addCard} className="grey-button">
+              <CircleCheckBig size={20} />
+              Toggle
+            </button>
+            <button onClick={addCard} className="add-button">
+              <Plus size={20} />
+              Add
+            </button>
+            <button onClick={addCard} className="grey-button">
+              <Shuffle size={20} />
+              Shuffle
+            </button>
+          </div>
+          <ul className="card-items">
+            {cards.map((card) => (
+              <li key={card.id} className={`card-item ${card.hidden && 'card-completed'}`}>
+                <button onClick={() => toggleCard(card.id)} className={`checkbox ${card.hidden ? '' : 'checkbox-completed'}`} >
+                  {!card.hidden && <Check size={16} className="check-icon" />}
+                </button>
+                <p className='card-text'>
+                  {card.flipped ? card.answer : card.question}
+                </p>
+                <button onClick={() => deleteCard(card.id)} className='delete-button' >
+                  <Trash2 size={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
+
       {isModal && (
         <div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
           <div className="modal">
@@ -129,7 +145,7 @@ export default function CardApp() {
               <button onClick={handleCreate} className="create-button add-button">
                 Create Card
               </button>
-              <button onClick={handleClose} className="cancel-button">
+              <button onClick={handleClose} className="grey-button">
                 Cancel
               </button>
             </div>

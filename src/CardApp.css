@@ -50,7 +50,7 @@ body {
   margin-bottom: 1.5rem;
   display: flex;
   gap: 0.75rem;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
 }
 
@@ -111,10 +111,31 @@ body {
   overflow: hidden;
 }
 
-.empty-state {
+.empty-box {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   padding: 4rem 2rem;
+  margin-bottom: 1.25rem;
   text-align: center;
   color: #9ca3af;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.active-box {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  padding: 4rem 2rem;
+  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 16em;
+  max-height: 32em;
 }
 
 .empty-icon {
@@ -183,6 +204,15 @@ body {
   flex: 1;
   color: #1f2937;
   font-size: 1.05rem;
+  line-height: 100%;
+  padding: 0.875rem 1.5rem;
+  border: none;
+}
+
+.main-text {
+  color: #1f2937;
+  font-size: 2rem;
+  line-height: 100%;
   padding: 0.875rem 1.5rem;
   border: none;
 }
@@ -229,7 +259,7 @@ body {
 }
 
 .edit-button:hover {
-  color: #667eea;
+  color: #a925d5;
   background: #eef2ff;
 }
 
@@ -270,8 +300,9 @@ body {
   background: #059669;
 }
 
-.cancel-button {
+.grey-button {
   padding: 0.5rem;
+  font-weight: 600;
   background: #9ca3af;
   color: white;
   border: none;
@@ -280,9 +311,10 @@ body {
   display: flex;
   align-items: center;
   transition: background 0.2s;
+  gap: 0.5rem;
 }
 
-.cancel-button:hover {
+.grey-button:hover {
   background: #6b7280;
 }
 
@@ -344,12 +376,13 @@ body {
   border-radius: 8px;
 }
 
-.modal .cancel-button {
+.modal .grey-button {
   background: #9ca3af;
   color: white;
   padding: 0.875rem 1.5rem;
   border: none;
   border-radius: 8px;
+  font-weight: 500;
 }
 
 .no-modal-active .modal-overlay {
