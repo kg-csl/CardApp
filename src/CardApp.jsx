@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Plus, Shuffle, CircleCheckBig, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen} from 'lucide-react';
+import { Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw} from 'lucide-react';
 import './CardApp.css';
 
 export default function CardApp() {
@@ -20,6 +20,11 @@ export default function CardApp() {
     question: '',
     answer: ''
   });
+  const [cardEdit, setEdit] = useState({
+    id: 0,
+    question: '',
+    answer: ''
+  });
 
   let defaultSize = 30; /* Let user edit this? */
   let disableMain = false;
@@ -29,33 +34,74 @@ export default function CardApp() {
     setModal(true);
   };
 
+  const editCard = (card) => {
+    setEdit(card);
+    setModalFade(true);
+    setModal(true);
+  };
+
   const handleCreate = () => {
     if (input.question != '' && input.answer != '') {
-      const newCard = {
-        id: Date.now(),
-        question: input.question.trim(),
-        answer: input.answer.trim(),
-      };
-      setCards([...cards, newCard]);
-      setActiveCard({...newCard, flipped: false});
-      setModalFade(false);
-      setInput({question: '', answer: ''});
-      setTimeout(() => {
-        setModal(false);
-      }, 150);
+      if (cardEdit.id != 0) {
+        const newCard = {
+          id: cardEdit.id,
+          question: input.question.trim(),
+          answer: input.answer.trim(),
+        };
+        setCards(cards.map((c) => {
+          if (c.id == newCard.id) {
+            return { 
+              ...c, 
+              question: newCard.question, 
+              answer: newCard.answer
+            };
+          }
+          else return c;
+        }));
+        activeCard.id == newCard.id && setActiveCard({...newCard, flipped: false});
+        setModalFade(false);
+        setTimeout(() => {
+          setModal(false);
+          setInput({question: '', answer: ''});
+          setEdit({
+            id: 0,
+            question: '',
+            answer: ''
+          });
+        }, 150);
+      }
+      else {
+        const newCard = {
+          id: Date.now(),
+          question: input.question.trim(),
+          answer: input.answer.trim(),
+        };
+        setCards([...cards, newCard]);
+        setActiveCard({...newCard, flipped: false});
+        setModalFade(false);
+        setTimeout(() => {
+          setModal(false);
+          setInput({question: '', answer: ''});
+        }, 150);
+      }
     }
   };
 
   const handleClose = () => {
     setModalFade(false)
-    setInput({question: '', answer: ''})
     setTimeout(() => {
       setModal(false);
+      setInput({question: '', answer: ''});
+      setEdit({
+        id: 0,
+        question: '',
+        answer: ''
+      });
     }, 150);
   };
 
   const deleteCard = (id) => {
-    setCards(cards.filter(card => card.id != id));
+    setCards(id == 0 ? [] : cards.filter(card => card.id != id));
   };
 
   function shrinkText() {
@@ -141,16 +187,16 @@ export default function CardApp() {
         <div className="card-list">
           <div className="input-section">
             <button onClick={addCard} className="grey-button">
-              <CircleCheckBig size={20} />
-              Toggle
+              <Shuffle size={20} />
+              Shuffle
             </button>
             <button onClick={addCard} className="add-button">
               <Plus size={20} />
               Add
             </button>
-            <button onClick={addCard} className="grey-button">
-              <Shuffle size={20} />
-              Shuffle
+            <button onClick={() => deleteCard(0)} className="grey-button">
+              <RefreshCcw size={20} />
+              Clear All
             </button>
           </div>
           <ul className="card-items">
@@ -165,7 +211,13 @@ export default function CardApp() {
                 <p className='card-text' style={{ fontWeight: `${activeCard.id == card.id ? 600 : 400}`}}>
                   {card.question}
                 </p>
-                <button onClick={() => editCard(card.id)} className='edit-button' >
+                <button onClick={() => {
+                  setInput({
+                    question: card.question,
+                    answer: card.answer
+                  });
+                  editCard(card);
+                }} className='edit-button' >
                   <SquarePen size={18} />
                 </button>
                 <button onClick={() => deleteCard(card.id)} className='delete-button' >
@@ -180,7 +232,7 @@ export default function CardApp() {
       {isModal && (
         <div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
           <div className="modal">
-            <p className="modal-header">Add New Card</p>
+            <p className="modal-header">{cardEdit.id != 0 ? 'Edit Card' : 'Add New Card'}</p>
             
             <label>Question:</label>
             <textarea
@@ -202,7 +254,7 @@ export default function CardApp() {
 
             <div className="modal-button-group">
               <button onClick={handleCreate} className="create-button add-button" disabled={input.question == '' || input.answer == ''}>
-                Create Card
+                {cardEdit.id != 0 ? 'Save Card' : 'Create Card'}
               </button>
               <button onClick={handleClose} className="grey-button">
                 Cancel
