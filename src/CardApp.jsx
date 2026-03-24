@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Plus, Check, Shuffle, CircleCheckBig, CircleChevronLeft, CircleChevronRight } from 'lucide-react';
+import { Trash2, Plus, Shuffle, CircleCheckBig, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen} from 'lucide-react';
 import './CardApp.css';
 
 export default function CardApp() {
@@ -8,10 +8,11 @@ export default function CardApp() {
     id: 0,
     question: '',
     answer: '',
-    hidden: false,
     flipped: false
   });
+
   const [textFade, setTextFade] = useState(true);
+  const [freeze, setFreeze] = useState(false);
 
   const [isModal, setModal] = useState(false);
   const [modalFade, setModalFade] = useState(false);
@@ -21,6 +22,7 @@ export default function CardApp() {
   });
 
   let defaultSize = 30; /* Let user edit this? */
+  let disableMain = false;
 
   const addCard = () => {
     setModalFade(true);
@@ -33,7 +35,6 @@ export default function CardApp() {
         id: Date.now(),
         question: input.question.trim(),
         answer: input.answer.trim(),
-        hidden: false,
       };
       setCards([...cards, newCard]);
       setActiveCard({...newCard, flipped: false});
@@ -51,12 +52,6 @@ export default function CardApp() {
     setTimeout(() => {
       setModal(false);
     }, 150);
-  };
-
-  const toggleCard = (id) => {
-    setCards(cards.map(card =>
-      card.id === id ? { ...card, hidden: !card.hidden } : card
-    ));
   };
 
   const deleteCard = (id) => {
@@ -86,7 +81,8 @@ export default function CardApp() {
           </div>
         ) : (
           <div onClick={() => {
-            if (textFade) {
+            if (textFade && !freeze && !disableMain) {
+              setFreeze(true);
               setTextFade(false);
               setTimeout(() => {
                 setActiveCard({...activeCard, flipped: !activeCard.flipped});
@@ -95,15 +91,48 @@ export default function CardApp() {
                   mainText.style.fontSize = defaultSize + 'px';
                   mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
                   setTextFade(true);
+                  setTimeout(() => { setFreeze(false) }, 150)
                 }, 1);
               }, 150);
             }
           }} className="active-box">
-            <button onClick={() => {setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) - 1])}} className="edit-button" disabled={cards.findIndex(card => card.id == activeCard.id) == 0}>
+            <button onClick={() => {if (!freeze) {
+              setFreeze(true);
+              setTextFade(false);
+              setTimeout(() => {
+                setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) - 1])
+                setTimeout(() => {
+                  const mainText = document.querySelector('.main-text');
+                  mainText.style.fontSize = defaultSize + 'px';
+                  mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+                  setTextFade(true);
+                  setTimeout(() => { setFreeze(false) }, 150)
+                }, 1);
+              }, 150);
+            }}}
+            onMouseEnter={() => disableMain = true} 
+            onMouseLeave={() => disableMain = false}
+            className="edit-button" disabled={freeze || cards.findIndex(card => card.id == activeCard.id) == 0}>
               <CircleChevronLeft size={30} />
             </button>
             <p className={`main-text ${textFade ? 'fadeIn' : 'fadeOut'}`}>{activeCard.flipped ? activeCard.answer : activeCard.question}</p>
-            <button onClick={() => {setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) + 1])}} className="edit-button" disabled={cards.findIndex(card => card.id == activeCard.id) == cards.length - 1}>
+            <button onClick={() => {if (!freeze) {
+              setFreeze(true);
+              setTextFade(false);
+              setTimeout(() => {
+                setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) + 1])
+                setTimeout(() => {
+                  const mainText = document.querySelector('.main-text');
+                  mainText.style.fontSize = defaultSize + 'px';
+                  mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+                  setTextFade(true);
+                  setTimeout(() => { setFreeze(false) }, 150)
+                }, 1);
+              }, 150);
+            }}}
+            onMouseEnter={() => disableMain = true} 
+            onMouseLeave={() => disableMain = false}
+            className="edit-button" disabled={freeze || cards.findIndex(card => card.id == activeCard.id) == cards.length - 1}>
               <CircleChevronRight size={30} />
             </button>
           </div>
@@ -126,13 +155,19 @@ export default function CardApp() {
           </div>
           <ul className="card-items">
             {cards.map((card) => (
-              <li key={card.id} className={`card-item ${card.hidden && 'card-completed'}`}>
-                <button onClick={() => toggleCard(card.id)} className={`checkbox ${card.hidden ? '' : 'checkbox-completed'}`} >
-                  {!card.hidden && <Check size={16} className="check-icon" />}
+              <li key={card.id} className='card-item'>
+                <button onClick={() => moveCard(card.id, true)} className='edit-button' >
+                  <MoveUp size={18} />
                 </button>
-                <p className='card-text'>
-                  {card.flipped ? card.answer : card.question}
+                <button onClick={() => moveCard(card.id, false)} className='edit-button' >
+                  <MoveDown size={18} />
+                </button>
+                <p className='card-text' style={{ fontWeight: `${activeCard.id == card.id ? 600 : 400}`}}>
+                  {card.question}
                 </p>
+                <button onClick={() => editCard(card.id)} className='edit-button' >
+                  <SquarePen size={18} />
+                </button>
                 <button onClick={() => deleteCard(card.id)} className='delete-button' >
                   <Trash2 size={18} />
                 </button>
