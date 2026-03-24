@@ -11,6 +11,7 @@ export default function CardApp() {
     hidden: false,
     flipped: false
   });
+  const [textFade, setTextFade] = useState(true);
 
   const [isModal, setModal] = useState(false);
   const [modalFade, setModalFade] = useState(false);
@@ -18,6 +19,8 @@ export default function CardApp() {
     question: '',
     answer: ''
   });
+
+  let defaultSize = 30; /* Let user edit this? */
 
   const addCard = () => {
     setModalFade(true);
@@ -60,6 +63,14 @@ export default function CardApp() {
     setCards(cards.filter(card => card.id != id));
   };
 
+  function shrinkText() {
+    const inputField = document.querySelector('.main-text');
+    const containerField = document.querySelector('.active-box');
+    let fontSize = parseFloat(window.getComputedStyle(inputField).fontSize);
+    inputField.style.fontSize = (fontSize - 1) + 'px';
+    inputField.clientHeight >= containerField.clientHeight && shrinkText();
+  }
+
   return (
     <div className={`app-container ${isModal ? 'active-modal' : ''}`}>
       <div className="app-wrapper">
@@ -74,13 +85,26 @@ export default function CardApp() {
             <p className="header-subtitle">No flashcards yet. Add one below!</p>
           </div>
         ) : (
-          <div onClick={() => setActiveCard({...activeCard, flipped: !activeCard.flipped})} className="active-box">
+          <div onClick={() => {
+            if (textFade) {
+              setTextFade(false);
+              setTimeout(() => {
+                setActiveCard({...activeCard, flipped: !activeCard.flipped});
+                setTimeout(() => {
+                  const mainText = document.querySelector('.main-text');
+                  mainText.style.fontSize = defaultSize + 'px';
+                  mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+                  setTextFade(true);
+                }, 1);
+              }, 150);
+            }
+          }} className="active-box">
             <button onClick={() => {setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) - 1])}} className="edit-button" disabled={cards.findIndex(card => card.id == activeCard.id) == 0}>
-              <CircleChevronLeft size={35} />
+              <CircleChevronLeft size={30} />
             </button>
-            <p className="main-text">{activeCard.flipped ? activeCard.answer : activeCard.question}</p>
+            <p className={`main-text ${textFade ? 'fadeIn' : 'fadeOut'}`}>{activeCard.flipped ? activeCard.answer : activeCard.question}</p>
             <button onClick={() => {setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) + 1])}} className="edit-button" disabled={cards.findIndex(card => card.id == activeCard.id) == cards.length - 1}>
-              <CircleChevronRight size={35} />
+              <CircleChevronRight size={30} />
             </button>
           </div>
         )}
@@ -142,7 +166,7 @@ export default function CardApp() {
             />
 
             <div className="modal-button-group">
-              <button onClick={handleCreate} className="create-button add-button">
+              <button onClick={handleCreate} className="create-button add-button" disabled={input.question == '' || input.answer == ''}>
                 Create Card
               </button>
               <button onClick={handleClose} className="grey-button">
