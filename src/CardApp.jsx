@@ -35,12 +35,9 @@ export default function CardApp() {
 
   const updateCards = () => {
     fetch('http://localhost:3001/api/cards')
-      .then(response => response.json())
-      .then(data => {
-        setCards(data);
-      })
-      .then(() => {
-        console.log(cards);
+      .then(response => {
+        console.log(response);
+        console.log(JSON.stringify(response));
       })
       .catch(error => console.error('Error:', error));
   };

@@ -112,20 +112,17 @@ const startServer = () => {
     cardConnection.query(createListQuery);
 
     http.createServer((req, res) => {
-        const allowedHeaders = 'Content-Type';
         const allowedMethods = 'GET,POST,OPTIONS';
         res.setHeader('Access-Control-Allow-Origin', '*'); 
         res.setHeader('Access-Control-Allow-Methods', allowedMethods);
-        res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+        res.setHeader('Access-Control-Allow-Headers', '*');
 
         if (req.url === '/api/cards') {
             cardConnection.query('SELECT * FROM cards ORDER BY id', (err, results) => {
                 if (err) {
-                    res.writeHead(500);
                     res.end(JSON.stringify({ error: err.message }));
                 }
                 else {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(results));
                 }
             });
@@ -133,11 +130,9 @@ const startServer = () => {
         if (req.url === '/api/list') {
             cardConnection.query('SELECT * FROM list ORDER BY position', (err, results) => {
                 if (err) {
-                    res.writeHead(500);
                     res.end(JSON.stringify({ error: err.message }));
                 }
                 else {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(results));
                 }
             });
@@ -145,11 +140,9 @@ const startServer = () => {
         if (req.url === '/api/all') {
             cardConnection.query('SELECT * FROM list NATURAL JOIN cards ORDER BY position', (err, results) => {
                 if (err) {
-                    res.writeHead(500);
                     res.end(JSON.stringify({ error: err.message }));
                 }
                 else {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(results));
                 }
             });
@@ -164,55 +157,46 @@ const startServer = () => {
                     const data = JSON.parse(body);
                     if (req.url.startsWith('/api/cards')) {
                         if (!data.position || !data.id || !data.question || !data.answer) {
-                            res.writeHead(400, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ error: 'Missing data' }));
                             return;
                         }
                         try {
                             addCardAndList(data.position, data.id, data.question, data.answer).then(() => {
                                 cardConnection.query('SELECT * FROM cards ORDER BY id', (err, updatedCards) => {
-                                    res.writeHead(200, { 'Content-Type': 'application/json' });
                                     res.end(JSON.stringify(updatedCards));
                                 });
                             });
                         }
                         catch (err) {
-                            res.writeHead(500);
                             res.end(JSON.stringify({ error: err.message }));
                         }
                     }
                     else if (req.url.startsWith('/api/list')) {
                         if (!data.position || !data.id) {
-                            res.writeHead(400, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ error: 'Missing data' }));
                             return;
                         }
                         try {
                             repositionCard(data.position, data.id).then(() => {
                                 cardConnection.query('SELECT * FROM list ORDER BY position', (err, updatedList) => {
-                                    res.writeHead(200, { 'Content-Type': 'application/json' });
                                     res.end(JSON.stringify(updatedList));
                                 });
                             });
                         }
                         catch (err) {
-                            res.writeHead(500);
                             res.end(JSON.stringify({ error: err.message }));
                         }
                     } 
                     else {
-                        res.writeHead(404);
                         res.end('Not Found');
                     }
                 } 
                 catch (e) {
-                    res.writeHead(400);
                     res.end(JSON.stringify({ error: e.message }));
                 }
             });
         } 
         else {
-            res.writeHead(404);
             res.end('Not Found');
         }
     }).listen(3001, () => {
