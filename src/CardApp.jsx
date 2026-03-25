@@ -35,12 +35,25 @@ export default function CardApp() {
 
   const updateCards = () => {
     fetch('http://localhost:3001/api/cards')
-      .then(response => {
-        console.log(response);
-        console.log(JSON.stringify(response));
-      })
-      .catch(error => console.error('Error:', error));
+    .then(response => response.json())
+    .then(data => {
+      setCards(data);
+    })
+    .catch(error => console.error('Error:', error));
   };
+
+  const newEntry = (pos, card) => {
+    fetch(`http://localhost:3001/api/cards`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        position: pos,
+        id: card.id,
+        question: card.question,
+        answer: card.answer
+      })
+    })
+    .then(updateCards);
+  }
 
   const addCard = () => {
     setModalFade(true);
@@ -111,13 +124,13 @@ export default function CardApp() {
           question: input.question.trim(),
           answer: input.answer.trim(),
         };
-        setCards([...cards, newCard]);
+        newEntry(cards.length + 1, newCard);
         setActiveCard({...newCard, flipped: false});
         setTimeout(() => {
           const mainText = document.querySelector('.main-text');
           mainText.style.fontSize = defaultSize + 'px';
           mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-        }, 1);
+        }, 50);
         setModalFade(false);
         setTimeout(() => {
           setModal(false);
@@ -145,13 +158,18 @@ export default function CardApp() {
       if (i == activeCard.id && cards.length > 1) {
         const index = cards.findIndex(card => card.id == i);
         setActiveCard({...cards[cards.length - 1 == index ? index - 1 : index + 1], flipped: false});
+        setCards(cards.filter(card => card.id != i));
         setTimeout(() => {
           const mainText = document.querySelector('.main-text');
           mainText.style.fontSize = defaultSize + 'px';
           mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
         }, 1);
       }
-      setCards(i == 0 ? [] : cards.filter(card => card.id != i));
+      else if (i == 0) {
+        fetch('http://localhost:3001/api/clear')
+        .then(updateCards)
+        .catch(error => console.error('Error:', error));
+      }
     }
   };
 
@@ -286,7 +304,7 @@ export default function CardApp() {
             <p className="modal-header">{cardEdit.id != 0 ? 'Edit Card' : 'Add New Card'}</p>
             
             <label>Question:</label>
-            <textarea
+            <textarea maxLength="999"
               className="modal-field"
               value={input.question}
               onChange={(e) => setInput({...input, question: e.target.value})}
@@ -295,7 +313,7 @@ export default function CardApp() {
             />
 
             <label>Answer:</label>
-            <textarea 
+            <textarea maxLength="999"
               className="modal-field"
               value={input.answer}
               onChange={(e) => setInput({...input, answer: e.target.value})}
