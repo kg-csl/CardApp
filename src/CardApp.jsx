@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw} from 'lucide-react';
 import './CardApp.css';
 
@@ -28,6 +28,22 @@ export default function CardApp() {
 
   let defaultSize = 30; /* Let user edit this? */
   let disableMain = false;
+
+  useEffect(() => {
+    updateCards();
+  }, []);
+
+  const updateCards = () => {
+    fetch('http://localhost:3001/api/cards')
+      .then(response => response.json())
+      .then(data => {
+        setCards(data);
+      })
+      .then(() => {
+        console.log(cards);
+      })
+      .catch(error => console.error('Error:', error));
+  };
 
   const addCard = () => {
     setModalFade(true);

@@ -1,6 +1,6 @@
-const mysql = require('mysql2');
-const { createPool } = require('mysql2/promise');
-const http = require('http');
+import mysql from 'mysql2';
+import { createPool } from 'mysql2/promise';
+import http from 'http';
 
 const dbConnection = mysql.createConnection({
     host     : 'localhost',
@@ -50,12 +50,18 @@ async function repositionCard(position, id) {
 
 dbConnection.connect();
 
-dbConnection.query('SHOW DATABASES').then(res => {
-    const dbNames = res.map(row => row['Database']).filter(name => name !== 'flashcards_db');
-    if (dbNames.length === 0) {
-        dbConnection.query('CREATE DATABASE flashcards_db');
+dbConnection.query('SHOW DATABASES', (err, res) => {
+    if (err) {
+        console.log("DB Creation error:");
+        console.log(err.message);
     }
-}).catch(err => console.log('DB Setup Error:', err));
+    else {
+        const dbNames = res.map(row => row['Database']).filter(name => name !== 'flashcards_db');
+        if (dbNames.length === 0) {
+            dbConnection.query('CREATE DATABASE flashcards_db');
+        }
+    }
+});
 
 const createCardsQuery = `
   CREATE TABLE IF NOT EXISTS cards (
@@ -75,6 +81,12 @@ dbConnection.query(createCardsQuery);
 dbConnection.query(createListQuery);
 
 http.createServer((req, res) => {
+    const allowedHeaders = 'Content-Type';
+    const allowedMethods = 'GET,POST,OPTIONS';
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
+    res.setHeader('Access-Control-Allow-Methods', allowedMethods);
+    res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+
     if (req.url === '/api/cards') {
         dbConnection.query('SELECT * FROM cards ORDER BY id', (err, results) => {
             if (err) {
@@ -126,10 +138,11 @@ http.createServer((req, res) => {
                         return;
                     }
                     try {
-                        addCardAndList(data.position, data.id, data.question, data.answer);
-                        dbConnection.query('SELECT * FROM cards ORDER BY id', (err, updatedCards) => {
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(updatedCards));
+                        addCardAndList(data.position, data.id, data.question, data.answer).then(() => {
+                            dbConnection.query('SELECT * FROM cards ORDER BY id', (err, updatedCards) => {
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify(updatedCards));
+                            });
                         });
                     }
                     catch (err) {
@@ -144,10 +157,11 @@ http.createServer((req, res) => {
                         return;
                     }
                     try {
-                        repositionCard(data.position, data.id);
-                        dbConnection.query('SELECT * FROM list ORDER BY position', (err, updatedList) => {
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(updatedList));
+                        repositionCard(data.position, data.id).then(() => {
+                            dbConnection.query('SELECT * FROM list ORDER BY position', (err, updatedList) => {
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify(updatedList));
+                            });
                         });
                     }
                     catch (err) {
