@@ -40,6 +40,23 @@ export default function CardApp() {
     setModal(true);
   };
 
+  const jumpCard = (card) => {
+    if (textFade && !freeze && !disableMain && card.id != activeCard.id) {
+      setFreeze(true);
+      setTextFade(false);
+      setTimeout(() => {
+        setActiveCard({...card, flipped: false});
+        setTimeout(() => {
+          const mainText = document.querySelector('.main-text');
+          mainText.style.fontSize = defaultSize + 'px';
+          mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+          setTextFade(true);
+          setTimeout(() => { setFreeze(false) }, 150)
+        }, 1);
+      }, 150);
+    }
+  };
+
   const handleCreate = () => {
     if (input.question != '' && input.answer != '') {
       if (cardEdit.id != 0) {
@@ -59,6 +76,11 @@ export default function CardApp() {
           else return c;
         }));
         activeCard.id == newCard.id && setActiveCard({...newCard, flipped: false});
+        setTimeout(() => {
+          const mainText = document.querySelector('.main-text');
+          mainText.style.fontSize = defaultSize + 'px';
+          mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+        }, 1);
         setModalFade(false);
         setTimeout(() => {
           setModal(false);
@@ -78,6 +100,11 @@ export default function CardApp() {
         };
         setCards([...cards, newCard]);
         setActiveCard({...newCard, flipped: false});
+        setTimeout(() => {
+          const mainText = document.querySelector('.main-text');
+          mainText.style.fontSize = defaultSize + 'px';
+          mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+        }, 1);
         setModalFade(false);
         setTimeout(() => {
           setModal(false);
@@ -100,8 +127,19 @@ export default function CardApp() {
     }, 150);
   };
 
-  const deleteCard = (id) => {
-    setCards(id == 0 ? [] : cards.filter(card => card.id != id));
+  const deleteCard = (i) => {
+    if (!freeze) {
+      if (i == activeCard.id && cards.length > 1) {
+        const index = cards.findIndex(card => card.id == i);
+        setActiveCard({...cards[cards.length - 1 == index ? index - 1 : index + 1], flipped: false});
+        setTimeout(() => {
+          const mainText = document.querySelector('.main-text');
+          mainText.style.fontSize = defaultSize + 'px';
+          mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+        }, 1);
+      }
+      setCards(i == 0 ? [] : cards.filter(card => card.id != i));
+    }
   };
 
   function shrinkText() {
@@ -201,11 +239,11 @@ export default function CardApp() {
           </div>
           <ul className="card-items">
             {cards.map((card) => (
-              <li key={card.id} className='card-item'>
-                <button onClick={() => moveCard(card.id, true)} className='edit-button' >
+              <li key={card.id} onClick={() => jumpCard(card)} className='card-item'>
+                <button onClick={() => moveCard(card.id, true)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
                   <MoveUp size={18} />
                 </button>
-                <button onClick={() => moveCard(card.id, false)} className='edit-button' >
+                <button onClick={() => moveCard(card.id, false)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
                   <MoveDown size={18} />
                 </button>
                 <p className='card-text' style={{ fontWeight: `${activeCard.id == card.id ? 600 : 400}`}}>
@@ -217,10 +255,10 @@ export default function CardApp() {
                     answer: card.answer
                   });
                   editCard(card);
-                }} className='edit-button' >
+                }} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
                   <SquarePen size={18} />
                 </button>
-                <button onClick={() => deleteCard(card.id)} className='delete-button' >
+                <button onClick={() => deleteCard(card.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
                   <Trash2 size={18} />
                 </button>
               </li>
