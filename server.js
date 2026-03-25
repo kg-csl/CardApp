@@ -5,18 +5,16 @@ import http from 'http';
 const dbConnection = mysql.createConnection({
     host     : 'localhost',
     user     : 'root',
-    password : 'root',
-    database : 'flashcards_db'
-});
-
-const pool = createPool({ 
-    host: 'localhost', 
-    user: 'root', 
-    password: 'root', 
-    database: 'flashcards_db' 
+    password : 'root'
 });
 
 async function addCardAndList(position, id, question, answer) {
+  const pool = createPool({ 
+      host: 'localhost', 
+      user: 'root', 
+      password: 'root', 
+      database: 'flashcards_db' 
+  });
   try {
     await pool.execute('START TRANSACTION');
     const insertCardQuery = `INSERT INTO cards (id, question, answer) VALUES (?, ?, ?)`;
@@ -30,9 +28,18 @@ async function addCardAndList(position, id, question, answer) {
     console.error('Transaction failed:', error);
     throw error;
   }
+  finally {
+    await pool.end();
+  }
 }
 
 async function repositionCard(position, id) {
+  const pool = createPool({ 
+      host: 'localhost', 
+      user: 'root', 
+      password: 'root', 
+      database: 'flashcards_db' 
+  });
   try {
     await pool.execute('START TRANSACTION');
     const deleteItem = `DELETE FROM list WHERE id = (?)`;
@@ -46,144 +53,169 @@ async function repositionCard(position, id) {
     console.error('Transaction failed:', error);
     throw error;
   }
+  finally {
+    await pool.end();
+  }
 }
 
 dbConnection.connect();
-
-dbConnection.query('SHOW DATABASES', (err, res) => {
+dbConnection.query(`SHOW DATABASES LIKE 'flashcards_db'`, (err, res) => {
     if (err) {
-        console.log("DB Creation error:");
+        console.log("DB detection error:");
         console.log(err.message);
     }
     else {
-        const dbNames = res.map(row => row['Database']).filter(name => name !== 'flashcards_db');
-        if (dbNames.length === 0) {
-            dbConnection.query('CREATE DATABASE flashcards_db');
+        if (res.length == 0) {
+            dbConnection.query('CREATE DATABASE flashcards_db', (error) => {
+                if (error) {
+                    console.log("DB creation error:");
+                    console.log(err.message);
+                }
+                else {
+                    dbConnection.end();
+                    startServer();
+                }
+            });
+        }
+        else {
+            dbConnection.end();
+            startServer();
         }
     }
 });
 
-const createCardsQuery = `
-  CREATE TABLE IF NOT EXISTS cards (
-      id BIGINT PRIMARY KEY,
-      question VARCHAR(255) NOT NULL,
-      answer VARCHAR(255) NOT NULL
-  )`;
+const startServer = () => {
+    const cardConnection = mysql.createConnection({
+        host     : 'localhost',
+        user     : 'root',
+        password : 'root',
+        database : 'flashcards_db'
+    });
 
-const createListQuery = `
-  CREATE TABLE IF NOT EXISTS list (
-      position INT PRIMARY KEY,
-      id BIGINT NOT NULL,
-      CONSTRAINT fk_cards FOREIGN KEY (id) REFERENCES cards(id)
-  )`;
+    cardConnection.connect()
 
-dbConnection.query(createCardsQuery);
-dbConnection.query(createListQuery);
+    const createCardsQuery = `
+    CREATE TABLE IF NOT EXISTS cards (
+        id BIGINT PRIMARY KEY,
+        question VARCHAR(255) NOT NULL,
+        answer VARCHAR(255) NOT NULL
+    )`;
 
-http.createServer((req, res) => {
-    const allowedHeaders = 'Content-Type';
-    const allowedMethods = 'GET,POST,OPTIONS';
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.setHeader('Access-Control-Allow-Methods', allowedMethods);
-    res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+    const createListQuery = `
+    CREATE TABLE IF NOT EXISTS list (
+        position INT PRIMARY KEY,
+        id BIGINT NOT NULL,
+        CONSTRAINT fk_cards FOREIGN KEY (id) REFERENCES cards(id)
+    )`;
 
-    if (req.url === '/api/cards') {
-        dbConnection.query('SELECT * FROM cards ORDER BY id', (err, results) => {
-            if (err) {
-                res.writeHead(500);
-                res.end(JSON.stringify({ error: err.message }));
-            }
-            else {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(results));
-            }
-        });
-    }
-    if (req.url === '/api/list') {
-        dbConnection.query('SELECT * FROM list ORDER BY position', (err, results) => {
-            if (err) {
-                res.writeHead(500);
-                res.end(JSON.stringify({ error: err.message }));
-            }
-            else {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(results));
-            }
-        });
-    }
-    if (req.url === '/api/all') {
-        dbConnection.query('SELECT * FROM list NATURAL JOIN cards ORDER BY position', (err, results) => {
-            if (err) {
-                res.writeHead(500);
-                res.end(JSON.stringify({ error: err.message }));
-            }
-            else {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(results));
-            }
-        });
-    }
-    if (req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => {
-            body += chunk.toString();
-        });
-        req.on('end', () => {
-            try {
-                const data = JSON.parse(body);
-                if (req.url.startsWith('/api/cards')) {
-                    if (!data.position || !data.id || !data.question || !data.answer) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ error: 'Missing data' }));
-                        return;
-                    }
-                    try {
-                        addCardAndList(data.position, data.id, data.question, data.answer).then(() => {
-                            dbConnection.query('SELECT * FROM cards ORDER BY id', (err, updatedCards) => {
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify(updatedCards));
-                            });
-                        });
-                    }
-                    catch (err) {
-                        res.writeHead(500);
-                        res.end(JSON.stringify({ error: err.message }));
-                    }
+    cardConnection.query(createCardsQuery);
+    cardConnection.query(createListQuery);
+
+    http.createServer((req, res) => {
+        const allowedHeaders = 'Content-Type';
+        const allowedMethods = 'GET,POST,OPTIONS';
+        res.setHeader('Access-Control-Allow-Origin', '*'); 
+        res.setHeader('Access-Control-Allow-Methods', allowedMethods);
+        res.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+
+        if (req.url === '/api/cards') {
+            cardConnection.query('SELECT * FROM cards ORDER BY id', (err, results) => {
+                if (err) {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ error: err.message }));
                 }
-                else if (req.url.startsWith('/api/list')) {
-                    if (!data.position || !data.id) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ error: 'Missing data' }));
-                        return;
-                    }
-                    try {
-                        repositionCard(data.position, data.id).then(() => {
-                            dbConnection.query('SELECT * FROM list ORDER BY position', (err, updatedList) => {
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify(updatedList));
+                else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(results));
+                }
+            });
+        }
+        if (req.url === '/api/list') {
+            cardConnection.query('SELECT * FROM list ORDER BY position', (err, results) => {
+                if (err) {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+                else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(results));
+                }
+            });
+        }
+        if (req.url === '/api/all') {
+            cardConnection.query('SELECT * FROM list NATURAL JOIN cards ORDER BY position', (err, results) => {
+                if (err) {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+                else {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(results));
+                }
+            });
+        }
+        if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => {
+                body += chunk.toString();
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    if (req.url.startsWith('/api/cards')) {
+                        if (!data.position || !data.id || !data.question || !data.answer) {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ error: 'Missing data' }));
+                            return;
+                        }
+                        try {
+                            addCardAndList(data.position, data.id, data.question, data.answer).then(() => {
+                                cardConnection.query('SELECT * FROM cards ORDER BY id', (err, updatedCards) => {
+                                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify(updatedCards));
+                                });
                             });
-                        });
+                        }
+                        catch (err) {
+                            res.writeHead(500);
+                            res.end(JSON.stringify({ error: err.message }));
+                        }
                     }
-                    catch (err) {
-                        res.writeHead(500);
-                        res.end(JSON.stringify({ error: err.message }));
+                    else if (req.url.startsWith('/api/list')) {
+                        if (!data.position || !data.id) {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ error: 'Missing data' }));
+                            return;
+                        }
+                        try {
+                            repositionCard(data.position, data.id).then(() => {
+                                cardConnection.query('SELECT * FROM list ORDER BY position', (err, updatedList) => {
+                                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify(updatedList));
+                                });
+                            });
+                        }
+                        catch (err) {
+                            res.writeHead(500);
+                            res.end(JSON.stringify({ error: err.message }));
+                        }
+                    } 
+                    else {
+                        res.writeHead(404);
+                        res.end('Not Found');
                     }
                 } 
-                else {
-                    res.writeHead(404);
-                    res.end('Not Found');
+                catch (e) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ error: e.message }));
                 }
-            } 
-            catch (e) {
-                res.writeHead(400);
-                res.end(JSON.stringify({ error: e.message }));
-            }
-        });
-    } 
-    else {
-        res.writeHead(404);
-        res.end('Not Found');
-    }
-}).listen(3001, () => {
-    console.log(`Local MySQL Proxy Server running on http://localhost:3001`);
-});
+            });
+        } 
+        else {
+            res.writeHead(404);
+            res.end('Not Found');
+        }
+    }).listen(3001, () => {
+        console.log(`Local MySQL Proxy Server running on http://localhost:3001`);
+    });
+}
