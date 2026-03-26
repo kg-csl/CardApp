@@ -4,6 +4,7 @@ import './CardApp.css';
 
 export default function CardApp() {
   const [cards, setCards] = useState([]);
+  const [order, setOrder] = useState([]);
   const [activeCard, setActiveCard] = useState({
     id: 0,
     question: '',
@@ -20,11 +21,7 @@ export default function CardApp() {
     question: '',
     answer: ''
   });
-  const [cardEdit, setEdit] = useState({
-    id: 0,
-    question: '',
-    answer: ''
-  });
+  const [cardEdit, setEdit] = useState(0);
 
   let defaultSize = 30; /* Let user edit this? */
   let disableMain = false;
@@ -38,7 +35,15 @@ export default function CardApp() {
     .then(response => response.json())
     .then(data => {
       setCards(data);
+      if (data.length == 0) {
+        setTimeout(() => {
+          document.querySelector('.header-subtitle').style.fontSize = defaultSize + 'px';
+        }, 50);
+      }
+      return fetch('http://localhost:3001/api/list');
     })
+    .then(res => res.json())
+    .then(ord => setOrder(ord))
     .catch(error => console.error('Error:', error));
   };
 
@@ -55,16 +60,76 @@ export default function CardApp() {
     .then(updateCards);
   }
 
+  const editEntry = (card) => {
+    fetch(`http://localhost:3001/api/cards`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        id: card.id,
+        question: card.question,
+        answer: card.answer
+      })
+    })
+    .then(updateCards);
+  }
+
+  const deleteEntry = (i, p) => {
+    fetch(`http://localhost:3001/api/cards`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        id: i,
+        positionOld: p
+      })
+    })
+    .then(updateCards);
+  }
+
+  const moveEntry = (i, p, q) => {
+    fetch(`http://localhost:3001/api/list`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        position: p,
+        positionOld: q,
+        id: i
+      })
+    })
+    .then(updateCards);
+  }
+
   const addCard = () => {
     setModalFade(true);
     setModal(true);
   };
 
   const editCard = (card) => {
-    setEdit(card);
+    setEdit(card.id);
     setModalFade(true);
     setModal(true);
   };
+
+  const nextCard = (forward) => {
+    if (!freeze) {
+      setFreeze(true);
+      setTextFade(false);
+      setTimeout(() => {
+        let pos = order.find(ord => ord.id == activeCard.id).position;
+        pos = forward ? pos + 1 : pos - 1;
+        setActiveCard({...cards.find(card => card.id == order.find(item => item.position == pos).id), flipped: false});
+        setTimeout(() => {
+          const mainText = document.querySelector('.main-text');
+          mainText.style.fontSize = defaultSize + 'px';
+          mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+          setTextFade(true);
+          setTimeout(() => { setFreeze(false) }, 150)
+        }, 1);
+      }, 150);
+    }
+  }
+
+  const checkPos = (pos) => {
+    const currentOrder = order.find(item => item.id == activeCard.id)
+    if (currentOrder) return currentOrder.position == pos;
+    else return true;
+  }
 
   const jumpCard = (card) => {
     if (textFade && !freeze && !disableMain && card.id != activeCard.id) {
@@ -85,22 +150,13 @@ export default function CardApp() {
 
   const handleCreate = () => {
     if (input.question != '' && input.answer != '') {
-      if (cardEdit.id != 0) {
+      if (cardEdit != 0) {
         const newCard = {
-          id: cardEdit.id,
+          id: cardEdit,
           question: input.question.trim(),
           answer: input.answer.trim(),
         };
-        setCards(cards.map((c) => {
-          if (c.id == newCard.id) {
-            return { 
-              ...c, 
-              question: newCard.question, 
-              answer: newCard.answer
-            };
-          }
-          else return c;
-        }));
+        editEntry(newCard);
         activeCard.id == newCard.id && setActiveCard({...newCard, flipped: false});
         setTimeout(() => {
           const mainText = document.querySelector('.main-text');
@@ -111,11 +167,7 @@ export default function CardApp() {
         setTimeout(() => {
           setModal(false);
           setInput({question: '', answer: ''});
-          setEdit({
-            id: 0,
-            question: '',
-            answer: ''
-          });
+          setEdit(0);
         }, 150);
       }
       else {
@@ -145,30 +197,28 @@ export default function CardApp() {
     setTimeout(() => {
       setModal(false);
       setInput({question: '', answer: ''});
-      setEdit({
-        id: 0,
-        question: '',
-        answer: ''
-      });
+      setEdit(0);
     }, 150);
   };
 
   const deleteCard = (i) => {
     if (!freeze) {
-      if (i == activeCard.id && cards.length > 1) {
-        const index = cards.findIndex(card => card.id == i);
-        setActiveCard({...cards[cards.length - 1 == index ? index - 1 : index + 1], flipped: false});
-        setCards(cards.filter(card => card.id != i));
+      if (i == 0) {
+        fetch('http://localhost:3001/api/clear')
+        .then(updateCards)
+        .catch(error => console.error('Error:', error));
+      }
+      else {
+        if ((i == activeCard.id && cards.length > 1)) {
+          const index = cards.findIndex(card => card.id == i);
+          setActiveCard({...cards[cards.length - 1 == index ? index - 1 : index + 1], flipped: false});
+        }
+        deleteEntry(i, order.find(item => item.id == i).position);
         setTimeout(() => {
           const mainText = document.querySelector('.main-text');
           mainText.style.fontSize = defaultSize + 'px';
           mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
         }, 1);
-      }
-      else if (i == 0) {
-        fetch('http://localhost:3001/api/clear')
-        .then(updateCards)
-        .catch(error => console.error('Error:', error));
       }
     }
   };
@@ -185,14 +235,13 @@ export default function CardApp() {
     <div className={`app-container ${isModal ? 'active-modal' : ''}`}>
       <div className="app-wrapper">
         <div className="header">
-          <h1 className="header-title">Flashcards 4 U</h1>
-          <p className="header-subtitle">Keagan's POTI Project!</p>
+          <h1 className="header-title">Flashcard Express</h1>
         </div>
 
-        {cards == 0 ? (
+        {order.length == 0 || activeCard.id == 0 ? (
           <div className="empty-box">
             <div className="empty-icon">📝</div>
-            <p className="header-subtitle">No flashcards yet. Add one below!</p>
+            <p className="header-subtitle">{order.length == 0 ? 'No flashcards yet. Add one below!' : 'Nothing selected. Choose one below!'}</p>
           </div>
         ) : (
           <div onClick={() => {
@@ -211,43 +260,17 @@ export default function CardApp() {
               }, 150);
             }
           }} className="active-box">
-            <button onClick={() => {if (!freeze) {
-              setFreeze(true);
-              setTextFade(false);
-              setTimeout(() => {
-                setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) - 1])
-                setTimeout(() => {
-                  const mainText = document.querySelector('.main-text');
-                  mainText.style.fontSize = defaultSize + 'px';
-                  mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-                  setTextFade(true);
-                  setTimeout(() => { setFreeze(false) }, 150)
-                }, 1);
-              }, 150);
-            }}}
+            <button onClick={() => nextCard(false)}
             onMouseEnter={() => disableMain = true} 
             onMouseLeave={() => disableMain = false}
-            className="edit-button" disabled={freeze || cards.findIndex(card => card.id == activeCard.id) == 0}>
+            className="edit-button" disabled={freeze || checkPos(1)}>
               <CircleChevronLeft size={30} />
             </button>
             <p className={`main-text ${textFade ? 'fadeIn' : 'fadeOut'}`}>{activeCard.flipped ? activeCard.answer : activeCard.question}</p>
-            <button onClick={() => {if (!freeze) {
-              setFreeze(true);
-              setTextFade(false);
-              setTimeout(() => {
-                setActiveCard(cards[cards.findIndex(card => card.id == activeCard.id) + 1])
-                setTimeout(() => {
-                  const mainText = document.querySelector('.main-text');
-                  mainText.style.fontSize = defaultSize + 'px';
-                  mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-                  setTextFade(true);
-                  setTimeout(() => { setFreeze(false) }, 150)
-                }, 1);
-              }, 150);
-            }}}
+            <button onClick={() => nextCard(true)}
             onMouseEnter={() => disableMain = true} 
             onMouseLeave={() => disableMain = false}
-            className="edit-button" disabled={freeze || cards.findIndex(card => card.id == activeCard.id) == cards.length - 1}>
+            className="edit-button" disabled={freeze || checkPos(order.length)}>
               <CircleChevronRight size={30} />
             </button>
           </div>
@@ -268,40 +291,42 @@ export default function CardApp() {
               Clear All
             </button>
           </div>
-          <ul className="card-items">
-            {cards.map((card) => (
-              <li key={card.id} onClick={() => jumpCard(card)} className='card-item'>
-                <button onClick={() => moveCard(card.id, true)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
-                  <MoveUp size={18} />
-                </button>
-                <button onClick={() => moveCard(card.id, false)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
-                  <MoveDown size={18} />
-                </button>
-                <p className='card-text' style={{ fontWeight: `${activeCard.id == card.id ? 600 : 400}`}}>
-                  {card.question}
-                </p>
-                <button onClick={() => {
-                  setInput({
-                    question: card.question,
-                    answer: card.answer
-                  });
-                  editCard(card);
-                }} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
-                  <SquarePen size={18} />
-                </button>
-                <button onClick={() => deleteCard(card.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
-                  <Trash2 size={18} />
-                </button>
-              </li>
-            ))}
-          </ul>
+          {order.length != 0 && <ul className="card-items">
+              {order.map((o) => {
+                const card = cards.find(c => c.id == o.id);
+                if (!card) return;
+                return (<li key={o.position} onClick={() => jumpCard(card)} className='card-item'>
+                  <button onClick={() => moveEntry(o.id, o.position - 1, o.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={o.position == 1}>
+                    <MoveUp size={18} />
+                  </button>
+                  <button onClick={() => moveEntry(o.id, o.position + 1, o.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={o.id == order[order.length - 1].id}>
+                    <MoveDown size={18} />
+                  </button>
+                  <p className='card-text' style={{ fontWeight: `${activeCard.id == o.id ? 600 : 400}`}}>
+                    {card.question}
+                  </p>
+                  <button onClick={() => {
+                    setInput({
+                      question: card.question,
+                      answer: card.answer
+                    });
+                    editCard(card);
+                  }} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
+                    <SquarePen size={18} />
+                  </button>
+                  <button onClick={() => deleteCard(o.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
+                    <Trash2 size={18} />
+                  </button>
+                </li>)
+              })}
+            </ul>}
         </div>
       </div>
 
       {isModal && (
         <div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
           <div className="modal">
-            <p className="modal-header">{cardEdit.id != 0 ? 'Edit Card' : 'Add New Card'}</p>
+            <p className="modal-header">{cardEdit != 0 ? 'Edit Card' : 'Add New Card'}</p>
             
             <label>Question:</label>
             <textarea maxLength="999"
@@ -323,7 +348,7 @@ export default function CardApp() {
 
             <div className="modal-button-group">
               <button onClick={handleCreate} className="create-button add-button" disabled={input.question == '' || input.answer == ''}>
-                {cardEdit.id != 0 ? 'Save Card' : 'Create Card'}
+                {cardEdit != 0 ? 'Save Card' : 'Create Card'}
               </button>
               <button onClick={handleClose} className="grey-button">
                 Cancel

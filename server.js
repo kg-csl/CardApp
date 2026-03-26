@@ -122,42 +122,80 @@ const startServer = () => {
                 try {
                     const data = JSON.parse(body);
                     if (req.url.startsWith('/api/cards')) {
-                        if (!data.position || !data.id || !data.question || !data.answer) {
+                        if (!data.id) {
                             res.end(JSON.stringify({ error: 'Missing data' }));
                             return;
                         }
-                        try {
-                            const insertCardQuery = `INSERT INTO cards (id, question, answer) VALUES (?, ?, ?)`;
-                            const insertListQuery = `INSERT INTO list (position, id) VALUES (?, ?)`;
-                            cardConnection.query('START TRANSACTION', () => {
-                                cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer], () => {
-                                    cardConnection.execute(insertListQuery, [data.position, data.id], () => {
-                                        cardConnection.query('COMMIT', () => {
-                                            res.end(JSON.stringify({message: `${data.id, data.question, data.answer} added to position ${data.position}`}));
+                        else if (data.position && data.question && data.answer) {
+                            try {
+                                const insertCardQuery = `INSERT INTO cards (id, question, answer) VALUES (?, ?, ?)`;
+                                const insertListQuery = `INSERT INTO list (position, id) VALUES (?, ?)`;
+                                cardConnection.query('START TRANSACTION', () => {
+                                    cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer], () => {
+                                        cardConnection.execute(insertListQuery, [data.position, data.id], () => {
+                                            cardConnection.query('COMMIT', () => {
+                                                res.end(JSON.stringify({message: `${data.id, data.question, data.answer} added to position ${data.position}`}));
+                                            })
                                         })
                                     })
-                                })
+                                });
+                            } 
+                            catch (error) {
+                                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                                console.log('Transaction failed:', error);
+                                res.end('Transaction failed:', error);
+                            }
+                        }
+                        else if (!data.position && data.question && data.answer) {
+                            cardConnection.query(`UPDATE cards SET question = '${data.question}', answer = '${data.answer}' WHERE id = ${data.id}`, (err, results) => {
+                                if (err) {
+                                    res.end(JSON.stringify({ error: err.message }));
+                                }
+                                else {
+                                    res.end(JSON.stringify({ success: true, message: results.toString() }));
+                                }
                             });
-                        } 
-                        catch (error) {
-                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
-                            console.log('Transaction failed:', error);
-                            res.end('Transaction failed:', error);
+                        }
+                        else if (!data.position && !data.question && !data.answer && data.positionOld) {
+                            try {
+                                const deleteList = `DELETE FROM list WHERE id = (?)`;
+                                const deleteCard = `DELETE FROM cards WHERE id = (?)`;
+                                const updateList = `UPDATE list SET position = position - 1 WHERE position > (?)`;
+                                cardConnection.query('START TRANSACTION', () => {
+                                    cardConnection.execute(deleteList, [data.id], () => {
+                                        cardConnection.execute(deleteCard, [data.id], () => {
+                                            cardConnection.execute(updateList, [data.positionOld], () => {
+                                                cardConnection.query('COMMIT', () => {
+                                                    res.end(JSON.stringify({message: `${data.id} removed from database.`}));
+                                                })
+                                            })
+                                        })
+                                    })
+                                });
+                            } 
+                            catch (error) {
+                                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                                console.log('Transaction failed:', error);
+                                res.end('Transaction failed:', error);
+                            }
                         }
                     }
-                    else if (req.url.startsWith('/api/list')) {
-                        if (!data.position || !data.id) {
-                            res.end(JSON.stringify({ error: 'Missing data' }));
+                    if (req.url.startsWith('/api/list')) {
+                        if (!data.position || !data.positionOld || !data.id) {
+                            res.end(JSON.stringify({ error: 'Missing data from list' }));
                             return;
                         }
                         try {
                             const deleteItem = `DELETE FROM list WHERE id = (?)`;
+                            const swapItem = `UPDATE list SET position = ? WHERE position = ?`;
                             const insertItem = `INSERT INTO list (position, id) VALUES (?, ?)`;
                             cardConnection.query('START TRANSACTION', () => {
                                 cardConnection.execute(deleteItem, [data.id], () => {
-                                    cardConnection.execute(insertItem, [data.position, data.id], () => {
-                                        cardConnection.query('COMMIT', () => {
-                                            res.end(JSON.stringify({message: `${data.id} moved to position ${data.position}`}));
+                                    cardConnection.execute(swapItem, [data.positionOld, data.position], () => {
+                                        cardConnection.execute(insertItem, [data.position, data.id], () => {
+                                            cardConnection.query('COMMIT', () => {
+                                                res.end(JSON.stringify({message: `${data.id} moved to position ${data.position}`}));
+                                            })
                                         })
                                     })
                                 })
@@ -168,9 +206,6 @@ const startServer = () => {
                             console.log('Transaction failed:', error);
                             res.end('Transaction failed:', error);
                         }
-                    } 
-                    else {
-                        res.end('Not Found.');
                     }
                 } 
                 catch (e) {
