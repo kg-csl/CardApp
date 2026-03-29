@@ -106,6 +106,39 @@ export default function CardApp() {
     setModal(true);
   };
 
+  const shuffle = () => {
+    if (!freeze) {
+      setFreeze(true);
+      shuffleEntry(order.length - 1);
+    }
+  };
+
+  const shuffleEntry = (i) => {
+    const newPos = Math.round(Math.random() * (order.length - 1) + 1);
+    fetch('http://localhost:3001/api/list')
+    .then(res => res.json())
+    .then(ord => {
+      if (ord[i].position == newPos) console.log('Skipping shuffle.');
+      else return fetch(`http://localhost:3001/api/list`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          position: newPos,
+          positionOld: ord[i].position,
+          id: ord[i].id
+        })
+      });
+    })
+    .then(() => {return fetch('http://localhost:3001/api/list')})
+    .then(result => result.json())
+    .then(order => setOrder(order))
+    .then(() => {
+      if (i > 0) setTimeout(() => {
+        shuffleEntry(i - 1);
+      }, 50); 
+      else setFreeze(false);
+    });
+  }
+
   const nextCard = (forward) => {
     if (!freeze) {
       setFreeze(true);
@@ -278,7 +311,7 @@ export default function CardApp() {
 
         <div className="card-list">
           <div className="input-section">
-            <button onClick={addCard} className="grey-button">
+            <button onClick={shuffle} className="grey-button" disabled={freeze}>
               <Shuffle size={20} />
               Shuffle
             </button>
