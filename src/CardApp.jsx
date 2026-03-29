@@ -96,14 +96,18 @@ export default function CardApp() {
   }
 
   const addCard = () => {
-    setModalFade(true);
-    setModal(true);
+    if (!freeze) {
+      setModalFade(true);
+      setModal(true);
+    }
   };
 
   const editCard = (card) => {
-    setEdit(card.id);
-    setModalFade(true);
-    setModal(true);
+    if (!freeze) {
+      setEdit(card.id);
+      setModalFade(true);
+      setModal(true);
+    }
   };
 
   const shuffle = () => {
