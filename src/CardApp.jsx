@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw} from 'lucide-react';
+import { Redo, Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw} from 'lucide-react';
 import './CardApp.css';
 
 export default function CardApp() {
@@ -12,8 +12,8 @@ export default function CardApp() {
     flipped: false
   });
 
-  const [textFade, setTextFade] = useState(true);
   const [freeze, setFreeze] = useState(false);
+  const [textFade, setTextFade] = useState(1); /* -1/1: fadeOut/In, -2/2: leftOut/In, -3/3, rightOut/In */
 
   const [isModal, setModal] = useState(false);
   const [modalFade, setModalFade] = useState(false);
@@ -111,7 +111,7 @@ export default function CardApp() {
   };
 
   const shuffle = () => {
-    if (!freeze) {
+    if (!freeze && order.length > 0) {
       setFreeze(true);
       shuffleEntry(order.length - 1);
     }
@@ -143,10 +143,15 @@ export default function CardApp() {
     });
   }
 
+  const calcFade = () => {
+    if (textFade > 0) return [null, 'fadeIn', 'fadeInLeft', 'fadeInRight'][textFade];
+    else return [null, 'fadeOut', 'fadeOutLeft', 'fadeOutRight'][-textFade];
+  }
+
   const nextCard = (forward) => {
     if (!freeze) {
       setFreeze(true);
-      setTextFade(false);
+      setTextFade(forward ? -2 : -3);
       setTimeout(() => {
         let pos = order.find(ord => ord.id == activeCard.id).position;
         pos = forward ? pos + 1 : pos - 1;
@@ -155,7 +160,7 @@ export default function CardApp() {
           const mainText = document.querySelector('.main-text');
           mainText.style.fontSize = defaultSize + 'px';
           mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-          setTextFade(true);
+          setTextFade(forward ? 3 : 2);
           setTimeout(() => { setFreeze(false) }, 150)
         }, 1);
       }, 150);
@@ -169,16 +174,16 @@ export default function CardApp() {
   }
 
   const jumpCard = (card) => {
-    if (textFade && !freeze && !disableMain && card.id != activeCard.id) {
+    if (textFade > 0 && !freeze && !disableMain && card.id != activeCard.id) {
       setFreeze(true);
-      setTextFade(false);
+      setTextFade(-1);
       setTimeout(() => {
         setActiveCard({...card, flipped: false});
         setTimeout(() => {
           const mainText = document.querySelector('.main-text');
           mainText.style.fontSize = defaultSize + 'px';
           mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-          setTextFade(true);
+          setTextFade(1);
           setTimeout(() => { setFreeze(false) }, 150)
         }, 1);
       }, 150);
@@ -282,34 +287,41 @@ export default function CardApp() {
           </div>
         ) : (
           <div onClick={() => {
-            if (textFade && !freeze && !disableMain) {
+            if (textFade > 0 && !freeze && !disableMain) {
               setFreeze(true);
-              setTextFade(false);
+              setTextFade(-1);
               setTimeout(() => {
                 setActiveCard({...activeCard, flipped: !activeCard.flipped});
                 setTimeout(() => {
                   const mainText = document.querySelector('.main-text');
                   mainText.style.fontSize = defaultSize + 'px';
                   mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-                  setTextFade(true);
+                  setTextFade(1);
                   setTimeout(() => { setFreeze(false) }, 150)
                 }, 1);
               }, 150);
             }
-          }} className="active-box">
-            <button onClick={() => nextCard(false)}
-            onMouseEnter={() => disableMain = true} 
-            onMouseLeave={() => disableMain = false}
-            className="edit-button" disabled={freeze || checkPos(1)}>
-              <CircleChevronLeft size={30} />
-            </button>
-            <p className={`main-text ${textFade ? 'fadeIn' : 'fadeOut'}`}>{activeCard.flipped ? activeCard.answer : activeCard.question}</p>
-            <button onClick={() => nextCard(true)}
-            onMouseEnter={() => disableMain = true} 
-            onMouseLeave={() => disableMain = false}
-            className="edit-button" disabled={freeze || checkPos(order.length)}>
-              <CircleChevronRight size={30} />
-            </button>
+          }} className='active-box'>
+            <div style={{ display: `flex`, justifyContent: `space-between`, alignItems: `center`, minHeight: `20em`, maxHeight: `20em`}}>
+              <button onClick={() => nextCard(false)}
+              onMouseEnter={() => disableMain = true} 
+              onMouseLeave={() => disableMain = false}
+              className="edit-button" disabled={freeze || checkPos(1)}>
+                <CircleChevronLeft size={30} />
+              </button>
+              <p className={`main-text ${calcFade()}`}>
+                {activeCard.flipped ? activeCard.answer : activeCard.question}
+              </p>
+              <button onClick={() => nextCard(true)}
+              onMouseEnter={() => disableMain = true} 
+              onMouseLeave={() => disableMain = false}
+              className="edit-button" disabled={freeze || checkPos(order.length)}>
+                <CircleChevronRight size={30} />
+              </button>
+            </div>
+            <div style={{ padding: `0rem`, transform: `translate(-240px, -355px)`, opacity: `${activeCard.flipped ? 1 : 0}` }} className={`${activeCard.flipped ? 'fadeIn' : 'fadeOut'}`}>
+              <Redo size={25}/>
+            </div>
           </div>
         )}
 
