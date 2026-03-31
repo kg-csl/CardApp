@@ -16,6 +16,7 @@ export default function CardApp() {
   const [textFade, setTextFade] = useState(1); /* -1/1: fadeOut/In, -2/2: leftOut/In, -3/3, rightOut/In */
 
   const [isModal, setModal] = useState(false);
+  const [isError, setError] = useState(false);
   const [modalFade, setModalFade] = useState(false);
   const [input, setInput] = useState({
     question: '',
@@ -23,14 +24,14 @@ export default function CardApp() {
   });
   const [cardEdit, setEdit] = useState(0);
 
-  let defaultSize = 30; /* Let user edit this? */
+  let defaultSize = 30;
   let disableMain = false;
 
   useEffect(() => {
     updateCards();
   }, []);
 
-  const updateCards = () => {
+  const updateCards = () => { 
     fetch('http://localhost:3001/api/cards')
     .then(response => response.json())
     .then(data => {
@@ -44,7 +45,10 @@ export default function CardApp() {
     })
     .then(res => res.json())
     .then(ord => setOrder(ord))
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+      console.error('Error:', error);
+      errorModal();
+    });
   };
 
   const newEntry = (pos, card) => {
@@ -57,7 +61,11 @@ export default function CardApp() {
         answer: card.answer
       })
     })
-    .then(updateCards);
+    .then(updateCards)
+    .catch(error => {
+      console.error('Error:', error);
+      errorModal();
+    });
   }
 
   const editEntry = (card) => {
@@ -69,7 +77,11 @@ export default function CardApp() {
         answer: card.answer
       })
     })
-    .then(updateCards);
+    .then(updateCards)
+    .catch(error => {
+      console.error('Error:', error);
+      errorModal();
+    });
   }
 
   const deleteEntry = (i, p) => {
@@ -80,7 +92,11 @@ export default function CardApp() {
         positionOld: p
       })
     })
-    .then(updateCards);
+    .then(updateCards)
+    .catch(error => {
+      console.error('Error:', error);
+      errorModal();
+    });
   }
 
   const moveEntry = (i, p, q) => {
@@ -92,7 +108,17 @@ export default function CardApp() {
         id: i
       })
     })
-    .then(updateCards);
+    .then(updateCards)
+    .catch(error => {
+      console.error('Error:', error);
+      errorModal();
+    });
+  }
+
+  const errorModal = () => {
+    setError(true);
+    setModalFade(true);
+    setModal(true);
   }
 
   const addCard = () => {
@@ -117,7 +143,7 @@ export default function CardApp() {
     }
   };
 
-  const shuffleEntry = (i) => {
+  const shuffleEntry = (i) => { /* for each card, pick a random number and swap positions with picked number */
     const newPos = Math.round(Math.random() * (order.length - 1) + 1);
     fetch('http://localhost:3001/api/list')
     .then(res => res.json())
@@ -140,6 +166,10 @@ export default function CardApp() {
         shuffleEntry(i - 1);
       }, 50); 
       else setFreeze(false);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      errorModal();
     });
   }
 
@@ -190,7 +220,7 @@ export default function CardApp() {
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = () => { /* code that runs when you click Add or Save Card */
     if (input.question != '' && input.answer != '') {
       if (cardEdit != 0) {
         const newCard = {
@@ -248,7 +278,10 @@ export default function CardApp() {
       if (i == 0) {
         fetch('http://localhost:3001/api/clear')
         .then(updateCards)
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          errorModal();
+        });
       }
       else {
         if ((i == activeCard.id && cards.length > 1)) {
@@ -265,7 +298,7 @@ export default function CardApp() {
     }
   };
 
-  function shrinkText() {
+  function shrinkText() { /* runs whenever long text is rendered in the main card space, attempts to shrink text to fit the height of the box */
     const inputField = document.querySelector('.main-text');
     const containerField = document.querySelector('.active-box');
     let fontSize = parseFloat(window.getComputedStyle(inputField).fontSize);
@@ -287,7 +320,7 @@ export default function CardApp() {
             <p className="header-subtitle">{order.length == 0 ? 'No flashcards yet. Add one below!' : 'Nothing selected. Choose one below!'}</p>
           </div>
         ) : (
-          <div onClick={() => {
+          <div onClick={() => { /* click anywhere on this div to flip question/answer */
             if (textFade > 0 && !freeze && !disableMain) {
               setFreeze(true);
               setTextFade(-1);
@@ -342,9 +375,9 @@ export default function CardApp() {
             </button>
           </div>
           {order.length != 0 && <ul className="card-items">
-              {order.map((o) => {
+              {order.map((o) => { /* set up the html list using the order state in order to display user pref */
                 const card = cards.find(c => c.id == o.id);
-                if (!card) return;
+                if (!card) return; /* don't attempt to render an empty card */
                 return (<li key={o.position} onClick={() => jumpCard(card)} className='card-item'>
                   <button onClick={() => moveEntry(o.id, o.position - 1, o.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={o.position == 1}>
                     <MoveUp size={18} />
@@ -373,8 +406,14 @@ export default function CardApp() {
         </div>
       </div>
 
-      {isModal && (
+      {isModal && ( /* handle pop-up display */
         <div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
+          {isError ? (
+          <div className="modal">
+            <p className="modal-header">FATAL ERROR!</p>
+            <p>There has been an issue contacting the SQL server. Ensure MySQL is installed correctly, with the same credentials found in the README file. Please restart server.js and refresh the site.</p>
+          </div>
+          ) : (
           <div className="modal">
             <p className="modal-header">{cardEdit != 0 ? 'Edit Card' : 'Add New Card'}</p>
             
@@ -405,9 +444,9 @@ export default function CardApp() {
               </button>
             </div>
           </div>
+          )}
         </div>
       )}
-
     </div>
   );
 }
