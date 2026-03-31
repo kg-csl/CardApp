@@ -277,6 +277,7 @@ export default function CardApp() {
     <div className={`app-container ${isModal ? 'active-modal' : ''}`}>
       <div className="app-wrapper">
         <div className="header">
+          <title>Flashcard Express</title>
           <h1 className="header-title">Flashcard Express</h1>
         </div>
 
