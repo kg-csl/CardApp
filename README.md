@@ -10,8 +10,18 @@ The technical stack operates as follows:
 5. The server makes requests to a MySql database to perform CRUD actions.
 
 Features:
+- Click anywhere on a card to flip it. A small arrow indicator will appear when cards are flipped.
+- Cards can be sorted through with the use of animated arrows.
+- An intuitive list UI is located under the main card, allowing you to edit cards and their order.
+- Cards can be randomised with a click of the Shuffle button.
+- Cards can be mass deleted with a click of the Clear All button.
+- Cards and your preferred order are stored locally.
 
 Challenges:
+- Data persistance was tricky, but I was able to use the SQL modules to work out how to create a local database.
+- Many animations were buggy but I powered through the React logic to make them work.
+- I faced several issues with aligning items using CSS but I employed the use of different styling methods to make everything seamless.
+
 
 This app requires a localhost MySql service with credentials root/root. Other dependencies can be found in package.json.
 
