@@ -18,18 +18,18 @@ Features:
 - Cards and your preferred order are stored locally.
 
 Folder structure:
-CardApp (the root folder)
-    node_modules (node.js binaries and other files)
-    src (contains the files for frontend website logic)
-    .gitignore (default file)
-    eslint.config.js (default file)
-    index.html (single page that accesses the code from src to render the website)
-    package-lock.json (contains info about dependencies and versions)
-    package.json (contains info about dependencies and versions)
-    README.md (readme file)
-    server.js (hosts a MySQL connection using a server at port 3001 to communicate with a local database)
-    StartApp.bat (launches both the MySQL server and the frontend website)
-    vite.config.js (vite configuration)
+- CardApp (the root folder)
+    - node_modules (node.js binaries and other files)
+    - src (contains the files for frontend website logic)
+    - .gitignore (default file)
+    - eslint.config.js (default file)
+    - index.html (single page that accesses the code from src to render the website)
+    - package-lock.json (contains info about dependencies and versions)
+    - package.json (contains info about dependencies and versions)
+    - README.md (readme file)
+    - server.js (hosts a MySQL connection using a server at port 3001 to communicate with a local database)
+    - StartApp.bat (launches both the MySQL server and the frontend website)
+    - vite.config.js (vite configuration)
 
 Challenges:
 - Data persistance was tricky, but I was able to use the SQL modules to work out how to create a local database.
