@@ -8,14 +8,14 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start-server": "node server.js"
+    "start-server": "node src/server.js"
   },
   "dependencies": {
     "http": "^0.0.1-security",
     "lucide-react": "^0.577.0",
-    "mysql2": "^3.20.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "mysql2": "^3.22.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
