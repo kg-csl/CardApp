@@ -8,7 +8,7 @@ const dbConnection = mysql.createConnection({
 });
 
 dbConnection.connect();
-dbConnection.query(`SHOW DATABASES LIKE 'flashcards_db'`, (err, res) => {
+dbConnection.query(`SHOW DATABASES LIKE 'flashcards_db'`, (err, res) => { /* detect whether database already exists */
     if (err) {
         console.log("DB detection error:");
         console.log(err.message);
@@ -43,6 +43,7 @@ const startServer = () => {
 
     cardConnection.connect()
 
+    /* create tables if they don't already exist in the database */
     const createCardsQuery = `
     CREATE TABLE IF NOT EXISTS cards (
         id BIGINT PRIMARY KEY,
@@ -60,7 +61,7 @@ const startServer = () => {
     cardConnection.query(createCardsQuery);
     cardConnection.query(createListQuery);
 
-    http.createServer((req, res) => {
+    http.createServer((req, res) => { /* initialise backend server */
         res.setHeader('Access-Control-Allow-Origin', '*'); 
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
