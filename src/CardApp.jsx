@@ -4,11 +4,11 @@ import './global.css';
 
 export default function CardApp() {
 	const [cards, setCards] = useState([]);
-	const [order, setOrder] = useState([]);
 	const [activeCard, setActiveCard] = useState({
 		id: 0,
 		question: '',
 		answer: '',
+		position: 0,
 		flipped: false
 	});
 
@@ -41,10 +41,7 @@ export default function CardApp() {
 			document.querySelector('.header-subtitle').style.fontSize = defaultSize + 'px';
 			}, 50);
 		}
-		return fetch('http://localhost:3001/api/list');
 		})
-		.then(res => res.json())
-		.then(ord => setOrder(ord))
 		.catch(error => {
 		console.error('Error:', error);
 		errorModal();
@@ -85,6 +82,15 @@ export default function CardApp() {
 	}
 
 	const deleteEntry = (i, p) => {
+		if ((i == activeCard.id && cards.length > 1)) {
+			const index = cards.findIndex(card => card.id == i);
+			if (cards.length - 1 == index) {
+				setActiveCard({...cards[index - 1], flipped: false});
+			}
+			else {
+				setActiveCard({...cards[index + 1], position: activeCard.position, flipped: false});
+			}
+		}
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'POST', headers: {'Content-Type':'application/json'},
 		body: JSON.stringify({
@@ -100,7 +106,10 @@ export default function CardApp() {
 	}
 
 	const moveEntry = (i, p, q) => {
-		fetch(`http://localhost:3001/api/list`, {
+		if (activeCard.id == i) {
+			setActiveCard({...activeCard, position: p});
+		}
+		fetch(`http://localhost:3001/api/cards`, {
 		method: 'POST', headers: {'Content-Type':'application/json'},
 		body: JSON.stringify({
 			position: p,
@@ -137,30 +146,30 @@ export default function CardApp() {
 	};
 
 	const shuffle = () => {
-		if (!freeze && order.length > 0) {
+		if (!freeze && cards.length > 0) {
 		setFreeze(true);
-		shuffleEntry(order.length - 1);
+		shuffleEntry(cards.length - 1);
 		}
 	};
 
 	const shuffleEntry = (i) => { // for each card, pick a random number and swap positions with picked number
-		const newPos = Math.round(Math.random() * (order.length - 1) + 1);
-		fetch('http://localhost:3001/api/list')
+		const newPos = Math.round(Math.random() * (cards.length - 1) + 1);
+		fetch('http://localhost:3001/api/cards')
 		.then(res => res.json())
-		.then(ord => {
-		if (ord[i].position == newPos) console.log('Skipping shuffle.');
-		else return fetch(`http://localhost:3001/api/list`, {
+		.then(crd => {
+		if (crd[i].position == newPos) console.log('Skipping shuffle.');
+		else return fetch(`http://localhost:3001/api/cards`, {
 			method: 'POST', headers: {'Content-Type':'application/json'},
 			body: JSON.stringify({
 			position: newPos,
-			positionOld: ord[i].position,
-			id: ord[i].id
+			positionOld: crd[i].position,
+			id: crd[i].id
 			})
 		});
 		})
-		.then(() => {return fetch('http://localhost:3001/api/list')})
+		.then(() => {return fetch('http://localhost:3001/api/cards')})
 		.then(result => result.json())
-		.then(order => setOrder(order))
+		.then(newCards => setCards(newCards))
 		.then(() => {
 		if (i > 0) setTimeout(() => {
 			shuffleEntry(i - 1);
@@ -183,9 +192,9 @@ export default function CardApp() {
 		setFreeze(true);
 		setTextFade(forward ? -2 : -3);
 		setTimeout(() => {
-			let pos = order.find(ord => ord.id == activeCard.id).position;
+			let pos = activeCard.position;
 			pos = forward ? pos + 1 : pos - 1;
-			setActiveCard({...cards.find(card => card.id == order.find(item => item.position == pos).id), flipped: false});
+			setActiveCard({...cards.find(card => card.position == pos), flipped: false});
 			setTimeout(() => {
 			const mainText = document.querySelector('.main-text');
 			mainText.style.fontSize = defaultSize + 'px';
@@ -195,12 +204,6 @@ export default function CardApp() {
 			}, 1);
 		}, 150);
 		}
-	}
-
-	const checkPos = (pos) => {
-		const currentOrder = order.find(item => item.id == activeCard.id)
-		if (currentOrder) return currentOrder.position == pos;
-		else return true;
 	}
 
 	const jumpCard = (card) => {
@@ -229,7 +232,7 @@ export default function CardApp() {
 			answer: input.answer.trim(),
 			};
 			editEntry(newCard);
-			activeCard.id == newCard.id && setActiveCard({...newCard, flipped: false});
+			activeCard.id == newCard.id && setActiveCard({...newCard, position: activeCard.position, flipped: false});
 			setTimeout(() => {
 			const mainText = document.querySelector('.main-text');
 			mainText.style.fontSize = defaultSize + 'px';
@@ -249,7 +252,7 @@ export default function CardApp() {
 			answer: input.answer.trim(),
 			};
 			newEntry(cards.length + 1, newCard);
-			setActiveCard({...newCard, flipped: false});
+			setActiveCard({...newCard, position: cards.length + 1, flipped: false});
 			setTimeout(() => {
 			const mainText = document.querySelector('.main-text');
 			mainText.style.fontSize = defaultSize + 'px';
@@ -284,11 +287,7 @@ export default function CardApp() {
 			});
 		}
 		else {
-			if ((i == activeCard.id && cards.length > 1)) {
-			const index = cards.findIndex(card => card.id == i);
-			setActiveCard({...cards[cards.length - 1 == index ? index - 1 : index + 1], flipped: false});
-			}
-			deleteEntry(i, order.find(item => item.id == i).position);
+			deleteEntry(i, cards.find(item => item.id == i).position);
 			setTimeout(() => {
 			const mainText = document.querySelector('.main-text');
 			mainText.style.fontSize = defaultSize + 'px';
@@ -314,10 +313,10 @@ export default function CardApp() {
 			<h1 className="header-title">Flashcard Express</h1>
 			</div>
 
-			{order.length == 0 || activeCard.id == 0 ? (
+			{cards.length == 0 || activeCard.id == 0 ? (
 			<div className="empty-box">
 				<div className="empty-icon">📝</div>
-				<p className="header-subtitle">{order.length == 0 ? 'No flashcards yet. Add one below!' : 'Nothing selected. Choose one below!'}</p>
+				<p className="header-subtitle">{cards.length == 0 ? 'No flashcards yet. Add one below!' : 'Nothing selected. Choose one below!'}</p>
 			</div>
 			) : (
 			<div onClick={() => { // click anywhere on this div to flip question/answer
@@ -340,7 +339,7 @@ export default function CardApp() {
 				<button onClick={() => nextCard(false)}
 				onMouseEnter={() => disableMain = true} 
 				onMouseLeave={() => disableMain = false}
-				className="edit-button" disabled={freeze || checkPos(1)}>
+				className="edit-button" disabled={freeze || activeCard.position == 1}>
 					<CircleChevronLeft size={30} />
 				</button>
 				<p className={`main-text ${calcFade()}`}>
@@ -349,7 +348,7 @@ export default function CardApp() {
 				<button onClick={() => nextCard(true)}
 				onMouseEnter={() => disableMain = true} 
 				onMouseLeave={() => disableMain = false}
-				className="edit-button" disabled={freeze || checkPos(order.length)}>
+				className="edit-button" disabled={freeze || activeCard.position == cards.length}>
 					<CircleChevronRight size={30} />
 				</button>
 				</div>
@@ -374,18 +373,17 @@ export default function CardApp() {
 				Clear All
 				</button>
 			</div>
-			{order.length != 0 && <ul className="card-items">
-				{order.map((o) => { // set up the html list using the order state in order to display user pref
-					const card = cards.find(c => c.id == o.id);
+			{cards.length != 0 && <ul className="card-items">
+				{cards.map((card) => {
 					if (!card) return; // don't attempt to render an empty card
-					return (<li key={o.position} onClick={() => jumpCard(card)} className='card-item'>
-					<button onClick={() => moveEntry(o.id, o.position - 1, o.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={o.position == 1}>
+					return (<li key={card.position} onClick={() => jumpCard(card)} className='card-item'>
+					<button onClick={() => moveEntry(card.id, card.position - 1, card.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={card.position == 1}>
 						<MoveUp size={18} />
 					</button>
-					<button onClick={() => moveEntry(o.id, o.position + 1, o.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={o.id == order[order.length - 1].id}>
+					<button onClick={() => moveEntry(card.id, card.position + 1, card.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={card.id == cards[cards.length - 1].id}>
 						<MoveDown size={18} />
 					</button>
-					<p className='card-text' style={{ fontWeight: `${activeCard.id == o.id ? 600 : 400}`}}>
+					<p className='card-text' style={{ fontWeight: `${activeCard.id == card.id ? 600 : 400}`}}>
 						{card.question}
 					</p>
 					<button onClick={() => {
@@ -397,7 +395,7 @@ export default function CardApp() {
 					}} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
 						<SquarePen size={18} />
 					</button>
-					<button onClick={() => deleteCard(o.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
+					<button onClick={() => deleteCard(card.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
 						<Trash2 size={18} />
 					</button>
 					</li>)
