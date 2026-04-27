@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Redo, Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw} from 'lucide-react';
-import './CardApp.css';
+import './global.css';
 
 export default function CardApp() {
 	const [cards, setCards] = useState([]);
@@ -13,7 +13,7 @@ export default function CardApp() {
 	});
 
 	const [freeze, setFreeze] = useState(false);
-	const [textFade, setTextFade] = useState(1); /* -1/1: fadeOut/In, -2/2: leftOut/In, -3/3, rightOut/In */
+	const [textFade, setTextFade] = useState(1); // -1/1: fadeOut/In, -2/2: leftOut/In, -3/3, rightOut/In
 
 	const [isModal, setModal] = useState(false);
 	const [isError, setError] = useState(false);
@@ -143,7 +143,7 @@ export default function CardApp() {
 		}
 	};
 
-	const shuffleEntry = (i) => { /* for each card, pick a random number and swap positions with picked number */
+	const shuffleEntry = (i) => { // for each card, pick a random number and swap positions with picked number
 		const newPos = Math.round(Math.random() * (order.length - 1) + 1);
 		fetch('http://localhost:3001/api/list')
 		.then(res => res.json())
@@ -220,7 +220,7 @@ export default function CardApp() {
 		}
 	};
 
-	const handleCreate = () => { /* code that runs when you click Add or Save Card */
+	const handleCreate = () => { // code that runs when you click Add or Save Card
 		if (input.question != '' && input.answer != '') {
 		if (cardEdit != 0) {
 			const newCard = {
@@ -298,7 +298,7 @@ export default function CardApp() {
 		}
 	};
 
-	function shrinkText() { /* runs whenever long text is rendered in the main card space, attempts to shrink text to fit the height of the box */
+	function shrinkText() { // runs whenever long text is rendered in the main card space, attempts to shrink text to fit the height of the box
 		const inputField = document.querySelector('.main-text');
 		const containerField = document.querySelector('.active-box');
 		let fontSize = parseFloat(window.getComputedStyle(inputField).fontSize);
@@ -320,7 +320,7 @@ export default function CardApp() {
 				<p className="header-subtitle">{order.length == 0 ? 'No flashcards yet. Add one below!' : 'Nothing selected. Choose one below!'}</p>
 			</div>
 			) : (
-			<div onClick={() => { /* click anywhere on this div to flip question/answer */
+			<div onClick={() => { // click anywhere on this div to flip question/answer
 				if (textFade > 0 && !freeze && !disableMain) {
 				setFreeze(true);
 				setTextFade(-1);
@@ -375,9 +375,9 @@ export default function CardApp() {
 				</button>
 			</div>
 			{order.length != 0 && <ul className="card-items">
-				{order.map((o) => { /* set up the html list using the order state in order to display user pref */
+				{order.map((o) => { // set up the html list using the order state in order to display user pref
 					const card = cards.find(c => c.id == o.id);
-					if (!card) return; /* don't attempt to render an empty card */
+					if (!card) return; // don't attempt to render an empty card
 					return (<li key={o.position} onClick={() => jumpCard(card)} className='card-item'>
 					<button onClick={() => moveEntry(o.id, o.position - 1, o.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={o.position == 1}>
 						<MoveUp size={18} />
@@ -406,7 +406,7 @@ export default function CardApp() {
 			</div>
 		</div>
 
-		{isModal && ( /* handle pop-up display */
+		{isModal && ( // handle pop-up display
 			<div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
 			{isError ? (
 			<div className="modal">
