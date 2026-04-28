@@ -17,6 +17,7 @@ export default function CardApp() {
 
 	const [isModal, setModal] = useState(false);
 	const [isError, setError] = useState(false);
+	const [askDelete, setDelete] = useState(-1);
 	const [modalFade, setModalFade] = useState(false);
 	const [input, setInput] = useState({
 		question: '',
@@ -126,6 +127,12 @@ export default function CardApp() {
 
 	const errorModal = () => {
 		setError(true);
+		setModalFade(true);
+		setModal(true);
+	}
+
+	const deleteModal = (i) => {
+		setDelete(i);
 		setModalFade(true);
 		setModal(true);
 	}
@@ -267,33 +274,35 @@ export default function CardApp() {
 		}
 	};
 
-	const handleClose = () => {
-		setModalFade(false)
+	const closeModal = () => {
+		setModalFade(false);
 		setTimeout(() => {
-		setModal(false);
-		setInput({question: '', answer: ''});
-		setEdit(0);
+			setModal(false);
+			setInput({question: '', answer: ''});
+			setEdit(0);
+			setDelete(-1);
+			setError(0);
 		}, 150);
 	};
 
 	const deleteCard = (i) => {
 		if (!freeze) {
-		if (i == 0) {
-			fetch('http://localhost:3001/api/clear')
-			.then(updateCards)
-			.catch(error => {
-			console.error('Error:', error);
-			errorModal();
-			});
-		}
-		else {
-			deleteEntry(i, cards.find(item => item.id == i).position);
-			setTimeout(() => {
-			const mainText = document.querySelector('.main-text');
-			mainText.style.fontSize = defaultSize + 'px';
-			mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
-			}, 1);
-		}
+			if (i == 0) {
+				fetch('http://localhost:3001/api/clear')
+				.then(updateCards)
+				.catch(error => {
+				console.error('Error:', error);
+				errorModal();
+				});
+			}
+			else {
+				deleteEntry(i, cards.find(item => item.id == i).position);
+				setTimeout(() => {
+				const mainText = document.querySelector('.main-text');
+				mainText.style.fontSize = defaultSize + 'px';
+				mainText.clientHeight >= document.querySelector('.active-box').clientHeight && shrinkText();
+				}, 1);
+			}
 		}
 	};
 
@@ -360,7 +369,7 @@ export default function CardApp() {
 
 			<div className="card-list">
 			<div className="input-section">
-				<button onClick={shuffle} className="grey-button" disabled={freeze}>
+				<button onClick={shuffle} className="grey-button" disabled={cards.length == 0 || freeze}>
 				<Shuffle size={20} />
 				Shuffle
 				</button>
@@ -368,7 +377,7 @@ export default function CardApp() {
 				<Plus size={20} />
 				Add
 				</button>
-				<button onClick={() => deleteCard(0)} className="grey-button">
+				<button onClick={() => deleteModal(0)} className="grey-button" disabled={cards.length == 0 || freeze}>
 				<RefreshCcw size={20} />
 				Clear All
 				</button>
@@ -395,7 +404,7 @@ export default function CardApp() {
 					}} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' >
 						<SquarePen size={18} />
 					</button>
-					<button onClick={() => deleteCard(card.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
+					<button onClick={() => deleteModal(card.id)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='delete-button' >
 						<Trash2 size={18} />
 					</button>
 					</li>)
@@ -406,10 +415,26 @@ export default function CardApp() {
 
 		{isModal && ( // handle pop-up display
 			<div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
-			{isError ? (
+			{isError ? ( // error message
 			<div className="modal">
 				<p className="modal-header">FATAL ERROR!</p>
 				<p>There has been an issue contacting the SQL server. Ensure MySQL is installed correctly, with the same credentials found in the README file. Please restart server.js and refresh the site.</p>
+			</div>
+			) : (askDelete >= 0 ? ( // delete confirmation
+			<div className="modal">
+				<p className="modal-header">{askDelete > 0 ? 'Delete card?' : 'Clear cards?'}</p>
+				<p>{askDelete > 0 ? 'Are you sure you want to remove this flashcard?' : 'Are you sure you want to reset all your flashcards?'}</p>
+				<div className="modal-button-group">
+					<button onClick={closeModal} className="grey-button">
+						Cancel
+					</button>
+					<button onClick={() => {
+						deleteCard(askDelete);
+						closeModal();
+					}} className="add-button save-button">
+						{askDelete > 0 ? 'Delete Flashcard' : 'Clear Flashcards'}
+					</button>
+				</div>
 			</div>
 			) : (
 			<div className="modal">
@@ -432,17 +457,16 @@ export default function CardApp() {
 				placeholder="Enter answer text..."
 				rows={4}
 				/>
-
 				<div className="modal-button-group">
-				<button onClick={handleCreate} className="create-button add-button" disabled={input.question == '' || input.answer == ''}>
-					{cardEdit != 0 ? 'Save Card' : 'Create Card'}
-				</button>
-				<button onClick={handleClose} className="grey-button">
-					Cancel
-				</button>
+					<button onClick={closeModal} className="grey-button">
+						Cancel
+					</button>
+					<button onClick={handleCreate} className="create-button add-button" disabled={input.question == '' || input.answer == ''}>
+						{cardEdit != 0 ? 'Save Card' : 'Create Card'}
+					</button>
 				</div>
 			</div>
-			)}
+			))}
 			</div>
 		)}
 		</div>
