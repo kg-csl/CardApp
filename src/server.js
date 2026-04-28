@@ -44,15 +44,36 @@ const startServer = () => {
     cardConnection.connect()
 
     // create tables if they don't exist
+    const createAccountsQuery = `
+    CREATE TABLE IF NOT EXISTS accounts (
+        username VARCHAR(999) PRIMARY KEY,
+        password VARCHAR(999) NOT NULL,
+        admin BOOLEAN,
+        deleted BOOLEAN
+    )`;
     const createCardsQuery = `
     CREATE TABLE IF NOT EXISTS cards (
         id BIGINT PRIMARY KEY,
         question VARCHAR(999) NOT NULL,
         answer VARCHAR(999) NOT NULL,
-        position INTEGER
+        position INTEGER NOT NULL,
+        username VARCHAR(999) NOT NULL,
+        FOREIGN KEY (username) REFERENCES accounts
+    )`;
+    const createHistoryQuery = `
+    CREATE TABLE IF NOT EXISTS history (
+        timestamp BIGINT PRIMARY KEY,
+        username VARCHAR(999) NOT NULL,
+        type VARCHAR(10) NOT NULL,
+        message VARCHAR(999) NOT NULL,
+        q_his VARCHAR(999),
+        a_his VARCHAR(999),
+        FOREIGN KEY (username) REFERENCES accounts
     )`;
 
+    cardConnection.query(createAccountsQuery);
     cardConnection.query(createCardsQuery);
+    cardConnection.query(createHistoryQuery);
 
     http.createServer((req, res) => { // initalise backend server
         res.setHeader('Access-Control-Allow-Origin', '*'); 
