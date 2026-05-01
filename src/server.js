@@ -46,8 +46,8 @@ const startServer = () => {
     // create tables if they don't exist
     const createAccountsQuery = `
     CREATE TABLE IF NOT EXISTS accounts (
-        username VARCHAR(999) PRIMARY KEY,
-        password VARCHAR(999) NOT NULL,
+        username VARCHAR(50) PRIMARY KEY,
+        password VARCHAR(50) NOT NULL,
         admin BOOLEAN,
         deleted BOOLEAN
     )`;
@@ -57,23 +57,23 @@ const startServer = () => {
         question VARCHAR(999) NOT NULL,
         answer VARCHAR(999) NOT NULL,
         position INTEGER NOT NULL,
-        username VARCHAR(999) NOT NULL,
-        FOREIGN KEY (username) REFERENCES accounts
+        username VARCHAR(50) NOT NULL,
+        FOREIGN KEY (username) REFERENCES accounts(username) ON DELETE CASCADE
     )`;
-    const createHistoryQuery = `
-    CREATE TABLE IF NOT EXISTS history (
+    const createLogsQuery = `
+    CREATE TABLE IF NOT EXISTS logs (
         timestamp BIGINT PRIMARY KEY,
-        username VARCHAR(999) NOT NULL,
+        username VARCHAR(50) NOT NULL,
         type VARCHAR(10) NOT NULL,
-        message VARCHAR(999) NOT NULL,
-        q_his VARCHAR(999),
-        a_his VARCHAR(999),
-        FOREIGN KEY (username) REFERENCES accounts
+        log_message VARCHAR(999),
+        log_question VARCHAR(999),
+        log_answer VARCHAR(999),
+        FOREIGN KEY (username) REFERENCES accounts(username) ON DELETE CASCADE
     )`;
 
     cardConnection.query(createAccountsQuery);
     cardConnection.query(createCardsQuery);
-    cardConnection.query(createHistoryQuery);
+    cardConnection.query(createLogsQuery);
 
     http.createServer((req, res) => { // initalise backend server
         res.setHeader('Access-Control-Allow-Origin', '*'); 
@@ -81,7 +81,7 @@ const startServer = () => {
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
         if (req.url === '/api/cards') {
-            cardConnection.query('SELECT * FROM cards ORDER BY position', (err, results) => {
+            cardConnection.query('SELECT * FROM cards ORDER BY username, position', (err, results) => {
                 if (err) {
                     res.end(JSON.stringify({ error: err.message }));
                 }
@@ -115,15 +115,25 @@ const startServer = () => {
                 try {
                     const data = JSON.parse(body);
                     if (req.url.startsWith('/api/cards')) {
-                        if (!data.id) {
+                        if (data.username && !data.id) {
+                            cardConnection.query(`SELECT id, question, answer, position FROM cards WHERE username = '${data.username}' ORDER BY position`, (err, results) => {
+                                if (err) {
+                                    res.end(JSON.stringify({ error: err.message }));
+                                }
+                                else {
+                                    res.end(JSON.stringify(results));
+                                }
+                            });
+                        }
+                        else if (!data.id) {
                             res.end(JSON.stringify({ error: 'Missing data' }));
                             return;
                         }
-                        else if (data.position && data.question && data.answer) {
+                        else if (data.username && data.position && data.question && data.answer) { // create new card
                             try {
-                                const insertCardQuery = `INSERT INTO cards (id, question, answer, position) VALUES (?, ?, ?, ?)`;
+                                const insertCardQuery = `INSERT INTO cards (id, question, answer, position, username) VALUES (?, ?, ?, ?, ?)`;
                                 cardConnection.query('START TRANSACTION', () => {
-                                    cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer, data.position], () => {
+                                    cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer, data.position, data.username], () => {
                                         cardConnection.query('COMMIT', () => {
                                             res.end(JSON.stringify({message: `${data.id, data.question, data.answer} added to position ${data.position}`}));
                                         })
@@ -136,7 +146,7 @@ const startServer = () => {
                                 res.end('Transaction failed:', error);
                             }
                         }
-                        else if (!data.position && data.question && data.answer) {
+                        else if (!data.position && !data.username && data.question && data.answer) { // edit card
                             cardConnection.query(`UPDATE cards SET question = '${data.question}', answer = '${data.answer}' WHERE id = ${data.id}`, (err, results) => {
                                 if (err) {
                                     res.end(JSON.stringify({ error: err.message }));
@@ -146,13 +156,13 @@ const startServer = () => {
                                 }
                             });
                         }
-                        else if (!data.position && !data.question && !data.answer && data.positionOld) {
+                        else if (!data.position && !data.question && !data.answer && data.username && data.positionOld) { // delete card
                             try {
                                 const deleteCard = `DELETE FROM cards WHERE id = (?)`;
-                                const updatePos = `UPDATE cards SET position = position - 1 WHERE position > (?)`;
+                                const updatePos = `UPDATE cards SET position = position - 1 WHERE username = (?) AND position > (?)`;
                                 cardConnection.query('START TRANSACTION', () => {
                                     cardConnection.execute(deleteCard, [data.id], () => {
-                                        cardConnection.execute(updatePos, [data.positionOld], () => {
+                                        cardConnection.execute(updatePos, [data.username, data.positionOld], () => {
                                             cardConnection.query('COMMIT', () => {
                                                 res.end(JSON.stringify({message: `${data.id} removed from database.`}));
                                             })
@@ -166,12 +176,12 @@ const startServer = () => {
                                 res.end('Transaction failed:', error);
                             }
                         }
-                        else if (data.position && data.positionOld && !data.question && !data.answer) {
+                        else if (data.position && data.positionOld && data.username && !data.question && !data.answer) { // swap card position
                             try {
-                                const clearPos = `UPDATE cards SET position = ? WHERE position = ?`;
-                                const moveItem = `UPDATE cards SET position = ? WHERE id = ?`;
+                                const clearPos = `UPDATE cards SET position = (?) WHERE position = (?) AND username = (?)`;
+                                const moveItem = `UPDATE cards SET position = (?) WHERE id = (?)`;
                                 cardConnection.query('START TRANSACTION', () => {
-                                    cardConnection.execute(clearPos, [data.positionOld, data.position], () => {
+                                    cardConnection.execute(clearPos, [data.positionOld, data.position, data.username], () => {
                                         cardConnection.execute(moveItem, [data.position, data.id], () => {
                                             cardConnection.query('COMMIT', () => {
                                                 res.end(JSON.stringify({message: `${data.id} moved to position ${data.position}`}));

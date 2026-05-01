@@ -3,6 +3,7 @@ import { Redo, Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, Mov
 import './global.css';
 
 export default function CardApp() {
+	const [user, setUser] = useState('default');
 	const [cards, setCards] = useState([]);
 	const [activeCard, setActiveCard] = useState({
 		id: 0,
@@ -33,7 +34,11 @@ export default function CardApp() {
 	}, []);
 
 	const updateCards = () => { 
-		fetch('http://localhost:3001/api/cards')
+		fetch(`http://localhost:3001/api/cards`, {
+		method: 'POST', headers: {'Content-Type':'application/json'},
+		body: JSON.stringify({
+			username: user
+		})})
 		.then(response => response.json())
 		.then(data => {
 		setCards(data);
@@ -56,9 +61,9 @@ export default function CardApp() {
 			position: pos,
 			id: card.id,
 			question: card.question,
-			answer: card.answer
-		})
-		})
+			answer: card.answer,
+			username: user
+		})})
 		.then(updateCards)
 		.catch(error => {
 		console.error('Error:', error);
@@ -73,8 +78,7 @@ export default function CardApp() {
 			id: card.id,
 			question: card.question,
 			answer: card.answer
-		})
-		})
+		})})
 		.then(updateCards)
 		.catch(error => {
 		console.error('Error:', error);
@@ -96,9 +100,9 @@ export default function CardApp() {
 		method: 'POST', headers: {'Content-Type':'application/json'},
 		body: JSON.stringify({
 			id: i,
-			positionOld: p
-		})
-		})
+			positionOld: p,
+			username: user
+		})})
 		.then(updateCards)
 		.catch(error => {
 		console.error('Error:', error);
@@ -115,9 +119,9 @@ export default function CardApp() {
 		body: JSON.stringify({
 			position: p,
 			positionOld: q,
-			id: i
-		})
-		})
+			id: i,
+			username: user
+		})})
 		.then(updateCards)
 		.catch(error => {
 		console.error('Error:', error);
@@ -161,7 +165,11 @@ export default function CardApp() {
 
 	const shuffleEntry = (i) => { // for each card, pick a random number and swap positions with picked number
 		const newPos = Math.round(Math.random() * (cards.length - 1) + 1);
-		fetch('http://localhost:3001/api/cards')
+		fetch(`http://localhost:3001/api/cards`, {
+		method: 'POST', headers: {'Content-Type':'application/json'},
+		body: JSON.stringify({
+			username: user
+		})})
 		.then(res => res.json())
 		.then(crd => {
 		if (crd[i].position == newPos) console.log('Skipping shuffle.');
@@ -170,11 +178,15 @@ export default function CardApp() {
 			body: JSON.stringify({
 			position: newPos,
 			positionOld: crd[i].position,
-			id: crd[i].id
+			id: crd[i].id,
+			username: user
 			})
-		});
-		})
-		.then(() => {return fetch('http://localhost:3001/api/cards')})
+		})})
+		.then(() => {return fetch(`http://localhost:3001/api/cards`, {
+		method: 'POST', headers: {'Content-Type':'application/json'},
+		body: JSON.stringify({
+			username: user
+		})})})
 		.then(result => result.json())
 		.then(newCards => setCards(newCards))
 		.then(() => {
