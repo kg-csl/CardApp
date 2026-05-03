@@ -77,7 +77,8 @@ export default function CardApp() {
 		body: JSON.stringify({
 			id: card.id,
 			question: card.question,
-			answer: card.answer
+			answer: card.answer,
+			username: user
 		})})
 		.then(updateCards)
 		.catch(error => {
