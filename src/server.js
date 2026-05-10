@@ -65,6 +65,7 @@ const startServer = () => {
         timestamp BIGINT PRIMARY KEY,
         username VARCHAR(50) NOT NULL,
         type VARCHAR(10) NOT NULL,
+        log_id BIGINT NOT NULL,
         log_question VARCHAR(999),
         log_answer VARCHAR(999),
         FOREIGN KEY (username) REFERENCES accounts(username) ON DELETE CASCADE
@@ -131,10 +132,10 @@ const startServer = () => {
                         else if (data.username && data.position && data.question && data.answer) { // create new card
                             try {
                                 const insertCardQuery = `INSERT INTO cards (id, question, answer, position, username) VALUES (?, ?, ?, ?, ?)`;
-                                const insertCardLog = `INSERT INTO logs (timestamp, username, type, log_question, log_answer) VALUES (?, ?, ?, ?, ?)`; // log creation
+                                const insertCardLog = `INSERT INTO logs (timestamp, username, type, log_id, log_question, log_answer) VALUES (?, ?, ?, ?, ?, ?)`; // log creation
                                 cardConnection.query('START TRANSACTION', () => {
                                     cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer, data.position, data.username], () => {
-                                        cardConnection.execute(insertCardLog, [Date.now(), data.username, 'creation', data.question, data.answer], () => {
+                                        cardConnection.execute(insertCardLog, [Date.now(), data.username, 'creation', data.id, data.question, data.answer], () => {
                                             cardConnection.query('COMMIT', () => {
                                                 res.end(JSON.stringify({message: `${data.id, data.question, data.answer} added to position ${data.position}`}));
                                             })
@@ -151,10 +152,10 @@ const startServer = () => {
                         else if (!data.position && data.username && data.question && data.answer) { // edit card
                             try {
                                 const editCardQuery = `UPDATE cards SET question = (?), answer = (?) WHERE id = (?)`;
-                                const editCardLog = `INSERT INTO logs (timestamp, username, type, log_question, log_answer) VALUES (?, ?, ?, ?, ?)`; // log edition
+                                const editCardLog = `INSERT INTO logs (timestamp, username, type, log_id, log_question, log_answer) VALUES (?, ?, ?, ?, ?, ?)`; // log edition
                                 cardConnection.query('START TRANSACTION', () => {
                                     cardConnection.execute(editCardQuery, [data.question, data.answer, data.id], () => {
-                                        cardConnection.execute(editCardLog, [Date.now(), data.username, 'edition', data.question, data.answer], () => {
+                                        cardConnection.execute(editCardLog, [Date.now(), data.username, 'edition', data.id, data.question, data.answer], () => {
                                             cardConnection.query('COMMIT', () => {
                                                 res.end(JSON.stringify({message: `${data.id} edited successfully.`}));
                                             })
@@ -172,11 +173,11 @@ const startServer = () => {
                             try {
                                 const deleteCard = `DELETE FROM cards WHERE id = (?)`;
                                 const updatePos = `UPDATE cards SET position = position - 1 WHERE username = (?) AND position > (?)`;
-                                const deleteCardLog = `INSERT INTO logs (timestamp, username, type) VALUES (?, ?, ?)`; // log deletion
+                                const deleteCardLog = `INSERT INTO logs (timestamp, username, type, log_id) VALUES (?, ?, ?, ?)`; // log deletion
                                 cardConnection.query('START TRANSACTION', () => {
                                     cardConnection.execute(deleteCard, [data.id], () => {
                                         cardConnection.execute(updatePos, [data.username, data.positionOld], () => {
-                                            cardConnection.execute(deleteCardLog, [Date.now(), data.username, 'deletion'], () => {
+                                            cardConnection.execute(deleteCardLog, [Date.now(), data.username, 'deletion', data.id], () => {
                                                 cardConnection.query('COMMIT', () => {
                                                     res.end(JSON.stringify({message: `${data.id} deleted successfully.`}));
                                                 })
