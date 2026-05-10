@@ -377,12 +377,15 @@ export default function CardApp() {
 				<div style={{ padding: `0rem`, transform: `translate(-240px, -355px)`, opacity: `${activeCard.flipped ? 1 : 0}` }} className={`${activeCard.flipped ? 'fadeIn' : 'fadeOut'}`}>
 				<Redo size={25}/>
 				</div>
+				<div style={{ padding: `0rem`, transform: `translate(0px, -20px)`}}>
+				{`${activeCard.position} / ${cards.length}`}
+				</div>
 			</div>
 			)}
 
 			<div className="card-list">
 			<div className="input-section">
-				<button onClick={shuffle} className="grey-button" disabled={cards.length == 0 || freeze}>
+				<button onClick={shuffle} className="add-button register" style={{ padding: `0.5rem`}} disabled={cards.length == 0 || freeze}>
 				<Shuffle size={20} />
 				Shuffle
 				</button>
@@ -390,7 +393,7 @@ export default function CardApp() {
 				<Plus size={20} />
 				Add
 				</button>
-				<button onClick={() => deleteModal(0)} className="grey-button" disabled={cards.length == 0 || freeze}>
+				<button onClick={() => deleteModal(0)} className="add-button register" style={{ padding: `0.5rem`}} disabled={cards.length == 0 || freeze}>
 				<RefreshCcw size={20} />
 				Clear All
 				</button>
