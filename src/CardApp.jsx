@@ -35,14 +35,15 @@ export default function CardApp() {
 
 	const updateCards = () => { 
 		fetch(`http://localhost:3001/api/cards`, {
-		method: 'POST', headers: {'Content-Type':'application/json'},
-		body: JSON.stringify({
-			username: user
-		})})
+		method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(response => response.json())
 		.then(data => {
-		setCards(data);
-		if (data.length == 0) {
+		let tempCards = [];
+		data.map(d => {
+			if (d.username == user) tempCards.push(d);
+		})
+		setCards(tempCards);
+		if (tempCards.length == 0) {
 			setTimeout(() => {
 			document.querySelector('.header-subtitle').style.fontSize = defaultSize + 'px';
 			}, 50);
@@ -160,6 +161,7 @@ export default function CardApp() {
 	const shuffle = () => {
 		if (!freeze && cards.length > 0) {
 		setFreeze(true);
+		setActiveCard({ id: 0, question: '', answer: '', position: 0, flipped: false});
 		shuffleEntry(cards.length - 1);
 		}
 	};
@@ -167,29 +169,34 @@ export default function CardApp() {
 	const shuffleEntry = (i) => { // for each card, pick a random number and swap positions with picked number
 		const newPos = Math.round(Math.random() * (cards.length - 1) + 1);
 		fetch(`http://localhost:3001/api/cards`, {
-		method: 'POST', headers: {'Content-Type':'application/json'},
-		body: JSON.stringify({
-			username: user
-		})})
+		method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(res => res.json())
 		.then(crd => {
-		if (crd[i].position == newPos) console.log('Skipping shuffle.');
+		let tempCards = [];
+		crd.map(d => {
+			if (d.username == user) tempCards.push(d);
+		})
+		if (tempCards[i].position == newPos) console.log('Skipping shuffle.');
 		else return fetch(`http://localhost:3001/api/cards`, {
 			method: 'POST', headers: {'Content-Type':'application/json'},
 			body: JSON.stringify({
 			position: newPos,
-			positionOld: crd[i].position,
-			id: crd[i].id,
+			positionOld: tempCards[i].position,
+			id: tempCards[i].id,
 			username: user
 			})
 		})})
-		.then(() => {return fetch(`http://localhost:3001/api/cards`, {
-		method: 'POST', headers: {'Content-Type':'application/json'},
-		body: JSON.stringify({
-			username: user
-		})})})
+		.then(() => { return 
+		fetch(`http://localhost:3001/api/cards`, {
+		method: 'GET', headers: {'Content-Type':'application/json'}})})
 		.then(result => result.json())
-		.then(newCards => setCards(newCards))
+		.then(newCards => {
+		let tempCards = [];
+		newCards.map(d => {
+			if (d.username == user) tempCards.push(d);
+		})
+		setCards(newCards)
+		})
 		.then(() => {
 		if (i > 0) setTimeout(() => {
 			shuffleEntry(i - 1);
@@ -301,7 +308,10 @@ export default function CardApp() {
 	const deleteCard = (i) => {
 		if (!freeze) {
 			if (i == 0) {
-				fetch('http://localhost:3001/api/clear')
+				fetch(`http://localhost:3001/api/cards`, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({
+					id: -1,
+					username: user
+				})})
 				.then(updateCards)
 				.catch(error => {
 				console.error('Error:', error);
@@ -395,7 +405,7 @@ export default function CardApp() {
 				</button>
 				<button onClick={() => deleteModal(0)} className="add-button register" style={{ padding: `0.5rem`}} disabled={cards.length == 0 || freeze}>
 				<RefreshCcw size={20} />
-				Clear All
+				Clear all
 				</button>
 			</div>
 			{cards.length != 0 && <ul className="card-items">

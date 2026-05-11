@@ -64,8 +64,8 @@ const startServer = () => {
     CREATE TABLE IF NOT EXISTS logs (
         timestamp BIGINT PRIMARY KEY,
         username VARCHAR(50) NOT NULL,
-        type VARCHAR(10) NOT NULL,
-        log_id BIGINT NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        log_id BIGINT,
         log_question VARCHAR(999),
         log_answer VARCHAR(999),
         FOREIGN KEY (username) REFERENCES accounts(username) ON DELETE CASCADE
@@ -79,8 +79,8 @@ const startServer = () => {
         res.setHeader('Access-Control-Allow-Origin', '*'); 
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-        if (req.url === '/api/cards') {
+        
+        if (req.url == '/api/cards') {
             cardConnection.query('SELECT * FROM cards ORDER BY username, position', (err, results) => {
                 if (err) {
                     res.end(JSON.stringify({ error: err.message }));
@@ -90,127 +90,127 @@ const startServer = () => {
                 }
             });
         }
-        if (req.url === '/api/clear') {
-            try {
-                cardConnection.query('START TRANSACTION', () => {
-                    cardConnection.query('DELETE FROM cards', () => {
-                        cardConnection.query('COMMIT', () => {
-                            res.end('Cleared all.');
-                        })
-                    })
-                });
-            } 
-            catch (error) {
-                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
-                console.log('Transaction failed:', error);
-                res.end('Transaction failed:', error);
-            }
-        }
-        if (req.method === 'POST') {
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
+        if (req.url == '/api/logs') {
+            cardConnection.query('SELECT * FROM logs ORDER BY timestamp DESC', (err, results) => {
+                if (err) {
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+                else {
+                    res.end(JSON.stringify(results));
+                }
             });
+        }
+        if (req.method == 'POST' && req.url.startsWith('/api/cards')) {
+            let body = '';
+            req.on('data', chunk => { body += chunk.toString(); });
             req.on('end', () => {
                 try {
                     const data = JSON.parse(body);
-                    if (req.url.startsWith('/api/cards')) {
-                        if (data.username && !data.id) {
-                            cardConnection.query(`SELECT id, question, answer, position FROM cards WHERE username = '${data.username}' ORDER BY position`, (err, results) => {
-                                if (err) {
-                                    res.end(JSON.stringify({ error: err.message }));
-                                }
-                                else {
-                                    res.end(JSON.stringify(results));
-                                }
+                    if (!data.id) {
+                        res.end(JSON.stringify({ error: 'Missing data' }));
+                        return;
+                    }
+                    else if (data.username && data.id == -1) { // clear all
+                        try {
+                            const clearCards = `DELETE FROM cards WHERE username = (?)`;
+                            const clearCardLog = `INSERT INTO logs (timestamp, username, type) VALUES (?, ?, ?)`; // log clear
+                            cardConnection.query('START TRANSACTION', () => {
+                                cardConnection.execute(clearCards, [data.username], () => {
+                                    cardConnection.execute(clearCardLog, [Date.now(), data.username, 'full deletion'], () => {
+                                        cardConnection.query('COMMIT', () => {
+                                            res.end(JSON.stringify({message: `Everything deleted successfully.`}));
+                                        })
+                                    })
+                                })
+                            });
+                        } 
+                        catch (error) {
+                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                            console.log('Transaction failed:', error);
+                            res.end('Transaction failed:', error);
+                        }
+                    }
+                    else if (data.username && data.position && data.question && data.answer) { // create new card
+                        try {
+                            const insertCardQuery = `INSERT INTO cards (id, question, answer, position, username) VALUES (?, ?, ?, ?, ?)`;
+                            const insertCardLog = `INSERT INTO logs (timestamp, username, type, log_id, log_question, log_answer) VALUES (?, ?, ?, ?, ?, ?)`; // log creation
+                            cardConnection.query('START TRANSACTION', () => {
+                                cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer, data.position, data.username], () => {
+                                    cardConnection.execute(insertCardLog, [Date.now(), data.username, 'creation', data.id, data.question, data.answer], () => {
+                                        cardConnection.query('COMMIT', () => {
+                                            res.end(JSON.stringify({message: `${data.id, data.question, data.answer} added to position ${data.position}`}));
+                                        })
+                                    })
+                                })
+                            });
+                        } 
+                        catch (error) {
+                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                            console.log('Transaction failed:', error);
+                            res.end('Transaction failed:', error);
+                        }
+                    }
+                    else if (!data.position && data.username && data.question && data.answer) { // edit card
+                        try {
+                            const editCardQuery = `UPDATE cards SET question = (?), answer = (?) WHERE id = (?)`;
+                            const editCardLog = `INSERT INTO logs (timestamp, username, type, log_id, log_question, log_answer) VALUES (?, ?, ?, ?, ?, ?)`; // log edition
+                            cardConnection.query('START TRANSACTION', () => {
+                                cardConnection.execute(editCardQuery, [data.question, data.answer, data.id], () => {
+                                    cardConnection.execute(editCardLog, [Date.now(), data.username, 'edition', data.id, data.question, data.answer], () => {
+                                        cardConnection.query('COMMIT', () => {
+                                            res.end(JSON.stringify({message: `${data.id} edited successfully.`}));
+                                        })
+                                    })
+                                })
+                            });
+                        } 
+                        catch (error) {
+                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                            console.log('Transaction failed:', error);
+                            res.end('Transaction failed:', error);
+                        }
+                    }
+                    else if (!data.position && !data.question && !data.answer && data.username && data.positionOld) { // delete card
+                        try {
+                            const deleteCard = `DELETE FROM cards WHERE id = (?)`;
+                            const updatePos = `UPDATE cards SET position = position - 1 WHERE username = (?) AND position > (?)`;
+                            const deleteCardLog = `INSERT INTO logs (timestamp, username, type, log_id) VALUES (?, ?, ?, ?)`; // log deletion
+                            cardConnection.query('START TRANSACTION', () => {
+                                cardConnection.execute(deleteCard, [data.id], () => {
+                                    cardConnection.execute(updatePos, [data.username, data.positionOld], () => {
+                                        cardConnection.execute(deleteCardLog, [Date.now(), data.username, 'deletion', data.id], () => {
+                                            cardConnection.query('COMMIT', () => {
+                                                res.end(JSON.stringify({message: `${data.id} deleted successfully.`}));
+                                            })
+                                        })
+                                    })
+                                })
+                            });
+                        } 
+                        catch (error) {
+                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                            console.log('Transaction failed:', error);
+                            res.end('Transaction failed:', error);
+                        }
+                    }
+                    else if (data.position && data.positionOld && data.username && !data.question && !data.answer) { // swap card position
+                        try {
+                            const clearPos = `UPDATE cards SET position = (?) WHERE position = (?) AND username = (?)`;
+                            const moveItem = `UPDATE cards SET position = (?) WHERE id = (?)`;
+                            cardConnection.query('START TRANSACTION', () => {
+                                cardConnection.execute(clearPos, [data.positionOld, data.position, data.username], () => {
+                                    cardConnection.execute(moveItem, [data.position, data.id], () => {
+                                        cardConnection.query('COMMIT', () => {
+                                            res.end(JSON.stringify({message: `${data.id} moved to position ${data.position}`}));
+                                        })
+                                    })
+                                })
                             });
                         }
-                        else if (!data.id) {
-                            res.end(JSON.stringify({ error: 'Missing data' }));
-                            return;
-                        }
-                        else if (data.username && data.position && data.question && data.answer) { // create new card
-                            try {
-                                const insertCardQuery = `INSERT INTO cards (id, question, answer, position, username) VALUES (?, ?, ?, ?, ?)`;
-                                const insertCardLog = `INSERT INTO logs (timestamp, username, type, log_id, log_question, log_answer) VALUES (?, ?, ?, ?, ?, ?)`; // log creation
-                                cardConnection.query('START TRANSACTION', () => {
-                                    cardConnection.execute(insertCardQuery, [data.id, data.question, data.answer, data.position, data.username], () => {
-                                        cardConnection.execute(insertCardLog, [Date.now(), data.username, 'creation', data.id, data.question, data.answer], () => {
-                                            cardConnection.query('COMMIT', () => {
-                                                res.end(JSON.stringify({message: `${data.id, data.question, data.answer} added to position ${data.position}`}));
-                                            })
-                                        })
-                                    })
-                                });
-                            } 
-                            catch (error) {
-                                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
-                                console.log('Transaction failed:', error);
-                                res.end('Transaction failed:', error);
-                            }
-                        }
-                        else if (!data.position && data.username && data.question && data.answer) { // edit card
-                            try {
-                                const editCardQuery = `UPDATE cards SET question = (?), answer = (?) WHERE id = (?)`;
-                                const editCardLog = `INSERT INTO logs (timestamp, username, type, log_id, log_question, log_answer) VALUES (?, ?, ?, ?, ?, ?)`; // log edition
-                                cardConnection.query('START TRANSACTION', () => {
-                                    cardConnection.execute(editCardQuery, [data.question, data.answer, data.id], () => {
-                                        cardConnection.execute(editCardLog, [Date.now(), data.username, 'edition', data.id, data.question, data.answer], () => {
-                                            cardConnection.query('COMMIT', () => {
-                                                res.end(JSON.stringify({message: `${data.id} edited successfully.`}));
-                                            })
-                                        })
-                                    })
-                                });
-                            } 
-                            catch (error) {
-                                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
-                                console.log('Transaction failed:', error);
-                                res.end('Transaction failed:', error);
-                            }
-                        }
-                        else if (!data.position && !data.question && !data.answer && data.username && data.positionOld) { // delete card
-                            try {
-                                const deleteCard = `DELETE FROM cards WHERE id = (?)`;
-                                const updatePos = `UPDATE cards SET position = position - 1 WHERE username = (?) AND position > (?)`;
-                                const deleteCardLog = `INSERT INTO logs (timestamp, username, type, log_id) VALUES (?, ?, ?, ?)`; // log deletion
-                                cardConnection.query('START TRANSACTION', () => {
-                                    cardConnection.execute(deleteCard, [data.id], () => {
-                                        cardConnection.execute(updatePos, [data.username, data.positionOld], () => {
-                                            cardConnection.execute(deleteCardLog, [Date.now(), data.username, 'deletion', data.id], () => {
-                                                cardConnection.query('COMMIT', () => {
-                                                    res.end(JSON.stringify({message: `${data.id} deleted successfully.`}));
-                                                })
-                                            })
-                                        })
-                                    })
-                                });
-                            } 
-                            catch (error) {
-                                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
-                                console.log('Transaction failed:', error);
-                                res.end('Transaction failed:', error);
-                            }
-                        }
-                        else if (data.position && data.positionOld && data.username && !data.question && !data.answer) { // swap card position
-                            try {
-                                const clearPos = `UPDATE cards SET position = (?) WHERE position = (?) AND username = (?)`;
-                                const moveItem = `UPDATE cards SET position = (?) WHERE id = (?)`;
-                                cardConnection.query('START TRANSACTION', () => {
-                                    cardConnection.execute(clearPos, [data.positionOld, data.position, data.username], () => {
-                                        cardConnection.execute(moveItem, [data.position, data.id], () => {
-                                            cardConnection.query('COMMIT', () => {
-                                                res.end(JSON.stringify({message: `${data.id} moved to position ${data.position}`}));
-                                            })
-                                        })
-                                    })
-                                });
-                            }
-                            catch (error) {
-                                cardConnection.query('ROLLBACK', (err) => console.log(err.message));
-                                console.log('Transaction failed:', error);
-                                res.end('Transaction failed:', error);
-                            }
+                        catch (error) {
+                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                            console.log('Transaction failed:', error);
+                            res.end('Transaction failed:', error);
                         }
                     }
                 } 
