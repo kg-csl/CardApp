@@ -212,11 +212,12 @@ export default function AdminPanel() {
 
 		<div className="card-list">
 		<div className="input-section">
-			<p>Filter logs by username...</p>
+			<input className="filter" style={{ padding: '0rem', textAlign: 'left' }} type="text" id="filterInput" placeholder="Type here to filter logs by username..." onInput={updateLogs}/>
 		</div>
 		{logs.length != 0 && <ul className="card-items">
 			{logs.map((log) => {
 				if (!log) return; // don't attempt to render an empty log entry
+				if (document.getElementById('filterInput')) if(document.getElementById('filterInput').value != '' && !log.username.toLowerCase().includes(document.getElementById('filterInput').value)) return; // filter using username
 				let time = '';
 				let minutes = Math.round((Date.now() - log.timestamp) / 60000);
 				if (minutes == 0) {
