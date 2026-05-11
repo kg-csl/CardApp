@@ -186,22 +186,27 @@ export default function CardApp() {
 			username: user
 			})
 		})})
-		.then(() => { return 
-		fetch(`http://localhost:3001/api/cards`, {
-		method: 'GET', headers: {'Content-Type':'application/json'}})})
-		.then(result => result.json())
-		.then(newCards => {
-		let tempCards = [];
-		newCards.map(d => {
-			if (d.username == user) tempCards.push(d);
-		})
-		setCards(newCards)
-		})
-		.then(() => {
-		if (i > 0) setTimeout(() => {
-			shuffleEntry(i - 1);
-		}, 50); 
-		else setFreeze(false);
+		.then(() => { 
+			fetch(`http://localhost:3001/api/cards`, {
+			method: 'GET', headers: {'Content-Type':'application/json'}})
+			.then(result => result.json())
+			.then(newCards => {
+			let tempCards = [];
+			newCards.map(d => {
+				if (d.username == user) tempCards.push(d);
+			})
+			setCards(tempCards)
+			})
+			.then(() => {
+			if (i > 0) setTimeout(() => {
+				shuffleEntry(i - 1);
+			}, 50); 
+			else setFreeze(false);
+			})
+			.catch(error => {
+			console.error('Error:', error);
+			errorModal();
+			});
 		})
 		.catch(error => {
 		console.error('Error:', error);
@@ -408,9 +413,11 @@ export default function CardApp() {
 				Clear all
 				</button>
 			</div>
+			{cards.length > 1 && <input className="filter" type="text" id="filterInput" placeholder="Type here to filter cards by question..." onInput={updateCards}/>}
 			{cards.length != 0 && <ul className="card-items">
 				{cards.map((card) => {
 					if (!card) return; // don't attempt to render an empty card
+					if (document.getElementById('filterInput')) if(document.getElementById('filterInput').value != '' && !card.question.toLowerCase().includes(document.getElementById('filterInput').value)) return; // filter out unwanted cards
 					return (<li key={card.position} onClick={() => jumpCard(card)} className='card-item'>
 					<button onClick={() => moveEntry(card.id, card.position - 1, card.position)} onMouseEnter={() => disableMain = true} onMouseLeave={() => disableMain = false} className='edit-button' disabled={card.position == 1}>
 						<MoveUp size={18} />

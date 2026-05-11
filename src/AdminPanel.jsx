@@ -12,7 +12,7 @@ export default function AdminPanel() {
 		log_question: '',
 		log_answer: ''
 	}]);
-	const [target, setTarget] = useState('default');
+	const [target, setTarget] = useState('');
 	const [cards, setCards] = useState([]);
 	const [activeCard, setActiveCard] = useState({
 		id: 0,
@@ -158,7 +158,7 @@ export default function AdminPanel() {
 			<div className="header">
 			<title>Flashcard Admin Panel</title>
 			<h1 className="header-title">Flashcard Admin Panel</h1>
-			<h1 className="header-subtitle">Viewing active flashcards of user {target}</h1>
+			<h1 className="header-subtitle">{target == '' ? 'No user focused, choose one from the logs!' : `Viewing active flashcards of user ${target}`}</h1>
 			</div>
 
 			{cards.length == 0 ? (

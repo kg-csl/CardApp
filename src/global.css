@@ -186,6 +186,17 @@ body {
   border-bottom: none;
 }
 
+.filter {
+  color: rgb(130, 130, 130);
+  background-color: white;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  min-width: 400px;
+  text-align: center;
+  padding-bottom: 1rem;
+}
+
 /* Card Text */
 .card-text {
   flex: 1;
