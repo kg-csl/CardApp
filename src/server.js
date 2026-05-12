@@ -47,7 +47,7 @@ const startServer = () => {
     const createAccountsQuery = `
     CREATE TABLE IF NOT EXISTS accounts (
         username VARCHAR(50) PRIMARY KEY,
-        password VARCHAR(50) NOT NULL,
+        password VARCHAR(250) NOT NULL,
         admin BOOLEAN,
         deleted BOOLEAN
     )`;
@@ -99,6 +99,19 @@ const startServer = () => {
                     res.end(JSON.stringify(results));
                 }
             });
+        }
+        if (req.url == '/api/accounts') {
+            cardConnection.query('SELECT * FROM accounts', (err, results) => {
+                if (err) {
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+                else {
+                    res.end(JSON.stringify(results));
+                }
+            });
+        }
+        if (req.url == '/api/hash') {
+            res.end(JSON.stringify({ key: 2523 }));
         }
         if (req.method == 'POST' && req.url.startsWith('/api/cards')) {
             let body = '';

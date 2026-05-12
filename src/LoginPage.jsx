@@ -1,24 +1,93 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './global.css';
 
 export default function LoginPage() {
-	const [username, setUsername] = useState('');
-	const [password, setPassword] = useState('');
+	const [accounts, setAccounts] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [register, setRegister] = useState(false);
+	const [radio, setRadio] = useState('');
 	const [error, setError] = useState(null);
+
+	const [username, setUsername] = useState('');
+	const [password, setPassword] = useState('');
+	const [userAuth, setUserAuth] = useState(localStorage.getItem('flashcardUser'));
+	const [tokenAuth, setTokenAuth] = useState(localStorage.getItem('flashcardToken'));
+
+	useEffect(() => {
+		updateAccounts();
+	}, []);
+
+	const checkPass = (passkey, admin) => {
+		let key = 0;
+		fetch(`http://localhost:3001/api/hash`)
+		.then(response => response.json())
+		.then(data => {
+			key = data.key;
+			const splitPass = password.split('');
+			const codedPass = splitPass.map(s => s.charCodeAt(0) * key);
+			if (codedPass.join(',') == passkey) window.location.href = `/${admin ? 'admin' : 'user'}`;
+			else {
+				setError('Username/password incorrect.');
+				setLoading(false);
+			}
+		});
+	}
 
 	const handleSubmit = () => {
 		setLoading(true);
-		
-		// placeholder
-		setTimeout(() => {
 		if (username && password) {
-			window.location.href = '/user';
+			if (register) {
+				if (radio == 'user') window.location.href = '/user';
+				else if (radio == 'admin') window.location.href = '/admin';
+			}
+			else {
+				let found = 0;
+				let passkey = '';
+				accounts.map(acc => {
+					if (acc.username == username) {
+						if (acc.deleted == 1) found = -1;
+						else if (acc.admin == 1) {
+							found = 2;
+							passkey = acc.password;
+						}
+						else {
+							found = 1;
+							passkey = acc.password;
+						}
+					}
+				})
+				switch (found) {
+					case -1:
+						setError('This username belonged to a recently deleted account, please use another.');
+						setLoading(false);
+						break;
+					case 0:
+						setError('Username/password incorrect.');
+						setLoading(false);
+						break;
+					case 1:
+						checkPass(passkey, false);
+						break;
+					case 2:
+						checkPass(passkey, true);
+						break;
+				}
+			}
 		} else {
 			setError('Please fill in all fields.');
 		}
-		}, 1000);
+	};
+
+	const updateAccounts = () => { 
+		fetch(`http://localhost:3001/api/accounts`, {method: 'GET', headers: {'Content-Type':'application/json'}})
+		.then(response => response.json())
+		.then(data => {
+		setAccounts(data);
+		})
+		.catch(error => {
+		console.error('Error:', error);
+		setError('There has been an issue contacting the SQL service. Please restart the server.');
+		});
 	};
 
 	return (
@@ -66,6 +135,20 @@ export default function LoginPage() {
 					/>
 				</div>
 
+				{register && (
+				<div className="radio-box">
+					<div className="radio">
+						<input id="radio1" name="radio" type="radio" value="user" onChange={() => setRadio(document.querySelector('input[name="radio"]:checked').value)}/>
+						<label htmlFor="radio1" className="radio-label">User account for learning</label>
+					</div>
+
+					<div className="radio">
+						<input id="radio2" name="radio" type="radio" value="admin" onChange={() => setRadio(document.querySelector('input[name="radio"]:checked').value)}/>
+						<label htmlFor="radio2" className="radio-label">Admin account for supervison</label>
+					</div>
+				</div>
+				)}
+
 				{register ? (
 					<div className="modal-button-group">
 						<button 
@@ -76,14 +159,14 @@ export default function LoginPage() {
 							}}
 							className="grey-button"
 							>
-							{'Back to Sign In'}
+							{'Go back'}
 						</button>
 						<button 
 							onClick={handleSubmit}
 							className="add-button" 
-							disabled={loading || !username || !password}
+							disabled={loading || !username || !password || radio == ''}
 							>
-							{loading ? 'Creating account...' : 'Create Account'}
+							{loading ? 'Creating account...' : 'Create account'}
 						</button>
 					</div>
 				) : (
@@ -93,6 +176,7 @@ export default function LoginPage() {
 								setRegister(true);
 								setUsername('');
 								setPassword('');
+								setRadio('');
 							}}
 							className="add-button register"
 							>
@@ -103,7 +187,7 @@ export default function LoginPage() {
 							className="add-button" 
 							disabled={loading || !username || !password}
 							>
-							{loading ? 'Signing in...' : 'Sign In'}
+							{loading ? 'Signing in...' : 'Sign in'}
 						</button>
 					</div>
 				)}
