@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Redo, CircleChevronLeft, CircleChevronRight, Eye, User } from 'lucide-react';
+import { Redo, CircleChevronLeft, CircleChevronRight, Eye, User, ArrowBigLeftDash } from 'lucide-react';
 import './global.css';
 
 export default function AdminPanel() {
-	const [admin, setAdmin] = useState('admin');
+	const [admin, setAdmin] = useState(null);
 	const [logs, setLogs] = useState([{
 		timestamp: 0,
 		username: '',
@@ -37,9 +37,45 @@ export default function AdminPanel() {
 	let defaultSize = 30;
 	let disableMain = false;
 
-	useEffect(() => {
-		updateCards(target);
-		updateLogs();
+	useEffect(() => { // automatically sign users in, or redirect to login page
+		if (admin == null) {
+			const storedToken = localStorage.getItem('flashcardToken');
+			const storedUser = localStorage.getItem('flashcardUser');
+			if (!storedToken || !storedUser) window.location.href = `/`; // no user data means send to login page
+			else {
+				fetch(`http://localhost:3001/api/token`)
+				.then(response => response.json())
+				.then(tok => {
+					if (tok.token == storedToken) { // verify token is correct
+						fetch(`http://localhost:3001/api/accounts`)
+						.then(response => response.json())
+						.then(data => {
+							let exists = false; // verify username exists
+							data.map(account => {
+								if (account.username == storedUser) {
+									if (account.admin == 0) window.location.href = `/user`;
+									else exists = true;
+								}
+							});
+							if (exists) {
+								setAdmin(storedUser);
+								updateCards(target);
+								updateLogs();
+							}
+						})
+					}
+					else { // clear storage if token is outdated
+						localStorage.setItem('flashcardToken', null);
+						localStorage.setItem('flashcardUser', null);
+						window.location.href = `/`;
+					}
+				})
+			}
+		}
+		else {
+			updateCards(target);
+			updateLogs();
+		}
 	}, []);
 
 	const updateCards = (user) => { 
@@ -144,6 +180,12 @@ export default function AdminPanel() {
 		}, 150);
 	};
 
+	const logout = () => {
+		localStorage.setItem('flashcardToken', null);
+		localStorage.setItem('flashcardUser', null);
+		window.location.href = `/`;
+	}
+
 	function shrinkText() { // runs whenever long text is rendered in the main card space, attempts to shrink text to fit the height of the box
 		const inputField = document.querySelector('.main-text');
 		const containerField = document.querySelector('.active-box');
@@ -158,6 +200,12 @@ export default function AdminPanel() {
 			<div className="header">
 			<title>Flashcard Admin Panel</title>
 			<h1 className="header-title">Flashcard Admin Panel</h1>
+			<div style={{ display: `flex`, justifyContent: `space-between`, alignItems: 'center', maxHeight: `50px` }}>
+				<button onClick={logout} className="add-button register" style={{ padding: `0.6rem` }} disabled={freeze}>
+					<ArrowBigLeftDash size={20} />Log out
+				</button>
+				<p className="header-title" style={{ fontSize: `1.1rem`, marginBottom: `0rem`, paddingBottom: `0rem` }}>Signed in as {admin}.</p>
+			</div>
 			<h1 className="header-subtitle">{target == '' ? 'No user focused, choose one from the logs!' : `Viewing active flashcards of user ${target}`}</h1>
 			</div>
 
@@ -246,6 +294,9 @@ export default function AdminPanel() {
 					case 'full deletion':
 						message += ` deleted all their cards.`;
 						break;
+					case 'init':
+						message += ` created their account.`;
+						break;
 				}
 				return (<li key={logs.findIndex(l => l.timestamp == log.timestamp)} className='card-item log-item'>
 				<p className='card-text date'>
@@ -254,7 +305,7 @@ export default function AdminPanel() {
 				<p className='card-text log'>
 					{message}
 				</p>
-				<button className='add-button edit-button' onClick={() => peek(log)} disabled={log.type.includes('deletion')}>
+				<button className='add-button edit-button' onClick={() => peek(log)} disabled={log.type.includes('deletion') || log.type.includes('init')}>
 					<Eye size={18} />
 					Peek
 				</button>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Redo, Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw} from 'lucide-react';
+import { Redo, Trash2, Plus, Shuffle, CircleChevronLeft, CircleChevronRight, MoveUp, MoveDown, SquarePen, RefreshCcw, ArrowBigLeftDash } from 'lucide-react';
 import './global.css';
 
 export default function CardApp() {
-	const [user, setUser] = useState('default');
+	const [user, setUser] = useState(null);
 	const [cards, setCards] = useState([]);
 	const [activeCard, setActiveCard] = useState({
 		id: 0,
@@ -29,18 +29,53 @@ export default function CardApp() {
 	let defaultSize = 30;
 	let disableMain = false;
 
-	useEffect(() => {
-		updateCards();
+	useEffect(() => { // automatically sign users in, or redirect to login page
+		if (user == null) {
+			const storedToken = localStorage.getItem('flashcardToken');
+			const storedUser = localStorage.getItem('flashcardUser');
+			if (!storedToken || !storedUser) window.location.href = `/`; // no user data means send to login page
+			else {
+				fetch(`http://localhost:3001/api/token`)
+				.then(response => response.json())
+				.then(tok => {
+					if (tok.token == storedToken) { // verify token is correct
+						fetch(`http://localhost:3001/api/accounts`)
+						.then(response => response.json())
+						.then(data => {
+							let exists = false; // verify username exists
+							data.map(account => {
+								if (account.username == storedUser) {
+									if (account.admin == 1) window.location.href = `/admin`;
+									else exists = true;
+								}
+							});
+							if (exists) {
+								setUser(storedUser);
+								updateCards(storedUser);
+							}
+						})
+					}
+					else { // clear storage if token is outdated
+						localStorage.setItem('flashcardToken', null);
+						localStorage.setItem('flashcardUser', null);
+						window.location.href = `/`;
+					}
+				})
+			}
+		}
+		else {
+			updateCards(user);
+		}
 	}, []);
 
-	const updateCards = () => { 
+	const updateCards = (username) => { 
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(response => response.json())
 		.then(data => {
 		let tempCards = [];
 		data.map(d => {
-			if (d.username == user) tempCards.push(d);
+			if (d.username == username) tempCards.push(d);
 		})
 		setCards(tempCards);
 		if (tempCards.length == 0) {
@@ -65,7 +100,7 @@ export default function CardApp() {
 			answer: card.answer,
 			username: user
 		})})
-		.then(updateCards)
+		.then(() => updateCards(user))
 		.catch(error => {
 		console.error('Error:', error);
 		errorModal();
@@ -81,7 +116,7 @@ export default function CardApp() {
 			answer: card.answer,
 			username: user
 		})})
-		.then(updateCards)
+		.then(() => updateCards(user))
 		.catch(error => {
 		console.error('Error:', error);
 		errorModal();
@@ -105,7 +140,7 @@ export default function CardApp() {
 			positionOld: p,
 			username: user
 		})})
-		.then(updateCards)
+		.then(() => updateCards(user))
 		.catch(error => {
 		console.error('Error:', error);
 		errorModal();
@@ -124,7 +159,7 @@ export default function CardApp() {
 			id: i,
 			username: user
 		})})
-		.then(updateCards)
+		.then(() => updateCards(user))
 		.catch(error => {
 		console.error('Error:', error);
 		errorModal();
@@ -317,7 +352,7 @@ export default function CardApp() {
 					id: -1,
 					username: user
 				})})
-				.then(updateCards)
+				.then(() => updateCards(user))
 				.catch(error => {
 				console.error('Error:', error);
 				errorModal();
@@ -334,6 +369,12 @@ export default function CardApp() {
 		}
 	};
 
+	const logout = () => {
+		localStorage.setItem('flashcardToken', null);
+		localStorage.setItem('flashcardUser', null);
+		window.location.href = `/`;
+	}
+
 	function shrinkText() { // runs whenever long text is rendered in the main card space, attempts to shrink text to fit the height of the box
 		const inputField = document.querySelector('.main-text');
 		const containerField = document.querySelector('.active-box');
@@ -345,9 +386,16 @@ export default function CardApp() {
 	return (
 		<div className={`app-container ${isModal ? 'active-modal' : ''}`}>
 		<div className="app-wrapper">
+			
 			<div className="header">
-			<title>Flashcard Express</title>
-			<h1 className="header-title">Flashcard Express</h1>
+				<title>Flashcard Express</title>
+				<h1 className="header-title">Flashcard Express</h1>
+				<div style={{ display: `flex`, justifyContent: `space-between`, alignItems: 'center', maxHeight: `50px` }}>
+					<button onClick={logout} className="add-button register" style={{ padding: `0.6rem` }} disabled={freeze}>
+						<ArrowBigLeftDash size={20} />Log out
+					</button>
+					<p className="header-title" style={{ fontSize: `1.1rem`, marginBottom: `0rem`, paddingBottom: `0rem` }}>Signed in as {user}.</p>
+				</div>
 			</div>
 
 			{cards.length == 0 || activeCard.id == 0 ? (
@@ -413,7 +461,7 @@ export default function CardApp() {
 				Clear all
 				</button>
 			</div>
-			{cards.length > 1 && <input className="filter" type="text" id="filterInput" placeholder="Type here to filter cards by question..." onInput={updateCards}/>}
+			{cards.length > 1 && <input className="filter" type="text" id="filterInput" placeholder="Type here to filter cards by question..." onInput={() => updateCards(user)}/>}
 			{cards.length != 0 && <ul className="card-items">
 				{cards.map((card) => {
 					if (!card) return; // don't attempt to render an empty card

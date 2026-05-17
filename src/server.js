@@ -1,6 +1,9 @@
 import mysql from 'mysql2';
 import http from 'http';
 
+const hash = 2523;
+const sleepToken = Date.now() * hash;
+
 const dbConnection = mysql.createConnection({
     host     : 'localhost',
     user     : 'root',
@@ -111,7 +114,10 @@ const startServer = () => {
             });
         }
         if (req.url == '/api/hash') {
-            res.end(JSON.stringify({ key: 2523 }));
+            res.end(JSON.stringify({ key: hash }));
+        }
+        if (req.url == '/api/token') {
+            res.end(JSON.stringify({ token: sleepToken }));
         }
         if (req.method == 'POST' && req.url.startsWith('/api/accounts')) {
             let body = '';
@@ -125,17 +131,29 @@ const startServer = () => {
                     }
                     else if (data.username && data.password) { // create new account
                         try {
-                            const createAccount = `INSERT INTO accounts VALUES (?, ?, ?, ?)`;
-                            const clearCardLog = `INSERT INTO logs (timestamp, username, type) VALUES (?, ?, ?)`; // log account creation
-                            cardConnection.query('START TRANSACTION', () => {
-                                cardConnection.execute(createAccount, [data.username, data.password, data.admin, false], () => {
-                                    cardConnection.execute(clearCardLog, [Date.now(), data.username, 'init'], () => {
-                                        cardConnection.query('COMMIT', () => {
-                                            res.end(JSON.stringify({message: `Account created successfully.`}));
+                            if (data.admin) {
+                                const createAccount = `INSERT INTO accounts VALUES (?, ?, ?, ?)`;
+                                cardConnection.query('START TRANSACTION', () => {
+                                    cardConnection.execute(createAccount, [data.username, data.password, data.admin, false], () => {
+                                            cardConnection.query('COMMIT', () => {
+                                                res.end(JSON.stringify({message: `Admin created successfully.`}));
+                                            })
+                                    })
+                                });
+                            }
+                            else {
+                                const createAccount = `INSERT INTO accounts VALUES (?, ?, ?, ?)`;
+                                const clearCardLog = `INSERT INTO logs (timestamp, username, type) VALUES (?, ?, ?)`; // log account creation
+                                cardConnection.query('START TRANSACTION', () => {
+                                    cardConnection.execute(createAccount, [data.username, data.password, data.admin, false], () => {
+                                        cardConnection.execute(clearCardLog, [Date.now(), data.username, 'init'], () => {
+                                            cardConnection.query('COMMIT', () => {
+                                                res.end(JSON.stringify({message: `Account created successfully.`}));
+                                            })
                                         })
                                     })
-                                })
-                            });
+                                });
+                            }
                         } 
                         catch (error) {
                             cardConnection.query('ROLLBACK', (err) => console.log(err.message));

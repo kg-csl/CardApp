@@ -10,14 +10,12 @@ export default function LoginPage() {
 
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
-	const [userAuth, setUserAuth] = useState(localStorage.getItem('flashcardUser'));
-	const [tokenAuth, setTokenAuth] = useState(localStorage.getItem('flashcardToken'));
 
 	useEffect(() => {
-		updateAccounts();
+		updateAccounts(); // refresh accounts on page reload
 	}, []);
 
-	const checkPass = (passkey, admin) => {
+	const checkPass = (passkey, admin) => { // decrypt stored password and check it against typed password
 		let key = 0;
 		fetch(`http://localhost:3001/api/hash`)
 		.then(response => response.json())
@@ -25,11 +23,17 @@ export default function LoginPage() {
 			key = data.key;
 			const splitPass = password.split('');
 			const codedPass = splitPass.map(s => s.charCodeAt(0) * key);
-			if (codedPass.join(',') == passkey) window.location.href = `/${admin ? 'admin' : 'user'}`;
-			else {
+			if (codedPass.join(',') != passkey) {
 				setError('Username/password incorrect.');
 				setLoading(false);
 			}
+			else return fetch(`http://localhost:3001/api/token`)
+		})
+		.then(resp => resp.json())
+		.then(tok => { // redirect to user/admin page and update token
+			localStorage.setItem('flashcardUser', username);
+			localStorage.setItem('flashcardToken', tok.token);
+			window.location.href = `/${admin ? 'admin' : 'user'}`; // redirect on success
 		});
 	}
 
@@ -37,7 +41,7 @@ export default function LoginPage() {
 		setLoading(true);
 		if (username && password) {
 			if (register) {
-				let free = true;
+				let free = true; // first check if username is unique
 				accounts.map(acc => {
 					if (acc.username == username) {
 						setLoading(false);
@@ -63,21 +67,26 @@ export default function LoginPage() {
 						fetch(`http://localhost:3001/api/hash`)
 						.then(response => response.json())
 						.then(data => {
-							const key = data.key;
+							const key = data.key; // encrypt user password for db storage
 							const splitPass = password.split('');
 							const codedPass = splitPass.map(s => s.charCodeAt(0) * key);
 							const finalPass = codedPass.join(',');
-							fetch(`http://localhost:3001/api/accounts`, {
+							return fetch(`http://localhost:3001/api/accounts`, {
 							method: 'POST', headers: {'Content-Type':'application/json'},
 							body: JSON.stringify({
 								username: username,
 								password: finalPass,
 								admin: radio == 'admin'
 							})})
-							.then(() => window.location.href = `/${radio}`)
-							.catch(error => {setError(`Error fetching hashkey. Please restart backend server. Message: ${error}`)});
 						})
-						.catch(error => {setError(`Error fetching hashkey. Please restart backend server. Message: ${error}`)});
+						.then(() => fetch(`http://localhost:3001/api/token`))
+						.then(resp => resp.json())
+						.then(tok => { // redirect to user/admin page and update token
+							localStorage.setItem('flashcardUser', username);
+							localStorage.setItem('flashcardToken', tok.token);
+							window.location.href = `/${radio}`
+						})		
+						.catch(error => {setError(`Error creating account. Please restart backend server. Message: ${error}`)});
 					}
 				}
 			}
@@ -119,15 +128,34 @@ export default function LoginPage() {
 		}
 	};
 
-	const updateAccounts = () => { 
+	const updateAccounts = (user, token) => { 
 		fetch(`http://localhost:3001/api/accounts`, {method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(response => response.json())
 		.then(data => {
-		setAccounts(data);
+			setAccounts(data);
+			if (user && token) {
+				let found = false;
+				data.map(account => {
+					if (!found && account.username == user) fetch(`http://localhost:3001/api/token`)
+					.then(response => response.json())
+					.then(result => {
+						found = true;
+						if (result.token == token) window.location.href = `/${account.admin == 1 ? 'admin' : 'user'}`;
+						else {
+							localStorage.setItem('flashcardUser', null);
+							localStorage.setItem('flashcardToken', null);
+						}
+					})
+				})
+				if (!found) {
+					localStorage.setItem('flashcardUser', null);
+					localStorage.setItem('flashcardToken', null);
+				}
+			}
 		})
 		.catch(error => {
-		console.error('Error:', error);
-		setError('There has been an issue contacting the SQL service. Please restart the server.');
+			console.error('Error:', error);
+			setError('There has been an issue contacting the SQL service. Please restart the server.');
 		});
 	};
 
