@@ -37,8 +37,49 @@ export default function LoginPage() {
 		setLoading(true);
 		if (username && password) {
 			if (register) {
-				if (radio == 'user') window.location.href = '/user';
-				else if (radio == 'admin') window.location.href = '/admin';
+				let free = true;
+				accounts.map(acc => {
+					if (acc.username == username) {
+						setLoading(false);
+						free = false;
+						if (acc.deleted == 1) {
+							setError('This username belonged to a recently deleted account, please use another.');
+						}
+						else {
+							setError('This username belongs to an existing account.');
+						}
+					}
+				})
+				if (free) {
+					if (password.length > 30) {
+						setError('Passwords cannot be longer than 30 characters.');
+						setLoading(false);
+					}
+					else if (password.length < 3) {
+						setError('Passwords cannot be shorter than 3 characters.');
+						setLoading(false);
+					}
+					else {
+						fetch(`http://localhost:3001/api/hash`)
+						.then(response => response.json())
+						.then(data => {
+							const key = data.key;
+							const splitPass = password.split('');
+							const codedPass = splitPass.map(s => s.charCodeAt(0) * key);
+							const finalPass = codedPass.join(',');
+							fetch(`http://localhost:3001/api/accounts`, {
+							method: 'POST', headers: {'Content-Type':'application/json'},
+							body: JSON.stringify({
+								username: username,
+								password: finalPass,
+								admin: radio == 'admin'
+							})})
+							.then(() => window.location.href = `/${radio}`)
+							.catch(error => {setError(`Error fetching hashkey. Please restart backend server. Message: ${error}`)});
+						})
+						.catch(error => {setError(`Error fetching hashkey. Please restart backend server. Message: ${error}`)});
+					}
+				}
 			}
 			else {
 				let found = 0;

@@ -113,6 +113,42 @@ const startServer = () => {
         if (req.url == '/api/hash') {
             res.end(JSON.stringify({ key: 2523 }));
         }
+        if (req.method == 'POST' && req.url.startsWith('/api/accounts')) {
+            let body = '';
+            req.on('data', chunk => { body += chunk.toString(); });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    if (!data.username) {
+                        res.end(JSON.stringify({ error: 'Missing data' }));
+                        return;
+                    }
+                    else if (data.username && data.password) { // create new account
+                        try {
+                            const createAccount = `INSERT INTO accounts VALUES (?, ?, ?, ?)`;
+                            const clearCardLog = `INSERT INTO logs (timestamp, username, type) VALUES (?, ?, ?)`; // log account creation
+                            cardConnection.query('START TRANSACTION', () => {
+                                cardConnection.execute(createAccount, [data.username, data.password, data.admin, false], () => {
+                                    cardConnection.execute(clearCardLog, [Date.now(), data.username, 'init'], () => {
+                                        cardConnection.query('COMMIT', () => {
+                                            res.end(JSON.stringify({message: `Account created successfully.`}));
+                                        })
+                                    })
+                                })
+                            });
+                        } 
+                        catch (error) {
+                            cardConnection.query('ROLLBACK', (err) => console.log(err.message));
+                            console.log('Transaction failed:', error);
+                            res.end('Transaction failed:', error);
+                        }
+                    }
+                }
+                catch (e) {
+                    res.end(JSON.stringify({ error: e.message }));
+                }
+            });
+        }
         if (req.method == 'POST' && req.url.startsWith('/api/cards')) {
             let body = '';
             req.on('data', chunk => { body += chunk.toString(); });
