@@ -22,23 +22,23 @@ Folder structure:
 CardApp/
 ├─ node_modules/
 ├─ src/  #where all the logic is stored
-│  ├─ AdminPanel.jsx  #frontend for admins
-│  ├─ App.css
-│  ├─ App.jsx
-│  ├─ CardApp.jsx  #frontend for users
-│  ├─ global.css  #css for AdminPanel, CardApp, and LoginPage
-│  ├─ index.css
-│  ├─ LoginPage.jsx  #frontend for login
-│  ├─ main.jsx
-│  ├─ server.js  #backend
-.gitignore
-eslint.config.js
-index.html
-package-lock.json
-package.json
-README.md
-StartApp.bat
-vite.config.js
+|   ├─ AdminPanel.jsx  #frontend for admins
+|   ├─ App.css
+|   ├─ App.jsx
+|   ├─ CardApp.jsx  #frontend for users
+|   ├─ global.css  #css for AdminPanel, CardApp, and LoginPage
+|   ├─ index.css
+|   ├─ LoginPage.jsx  #frontend for login
+|   ├─ main.jsx
+|   ├─ server.js  #backend
+├─ .gitignore
+├─ eslint.config.js
+├─ index.html
+├─ package-lock.json
+├─ package.json
+├─ README.md
+├─ StartApp.bat  #launches both the frontend and backend
+├─ vite.config.js
 
 
 Challenges:
