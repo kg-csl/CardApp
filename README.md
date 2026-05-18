@@ -4,37 +4,48 @@ This app allows you to create a set of flashcards, each with a question and answ
 
 The technical stack operates as follows:
 1. The user interfaces with the localhost frontend website.
-2. The frontend is set up via CardApp.jsx.
-3. CardApp.jsx is styled by CardApp.css.
-4. CardApp.jsx receives and sends data to a server on port 3001 set up by server.js.
+2. The frontend is set up via CardApp, LoginPage, and AdminPanel.
+3. Everything is styled by global.css.
+4. Pages receive and send data to a server on port 3001 set up by server.js.
 5. The server makes requests to a MySQL database to perform CRUD actions.
 
 Features:
 - Click anywhere on a card to flip it. A small arrow indicator will appear when cards are flipped.
-- Cards can be sorted through with the use of animated arrows.
+- Cards can be sorted through with the use of animated arrows, or a live search.
 - An intuitive list UI is located under the main card, allowing you to edit cards and their order.
 - Cards can be randomised with a click of the Shuffle button.
 - Cards can be mass deleted with a click of the Clear All button.
-- Cards and your preferred order are stored locally.
+- Cards and your preferred order are stored locally, and per-user.
+- Sites will automatically reroute you to relevant pages depending on whether you are logged in as a user or admin.
 
 Folder structure:
-- CardApp (the root folder)
-    - node_modules (node.js binaries and other files)
-    - src (contains the files for frontend website logic)
-    - .gitignore (default file)
-    - eslint.config.js (default file)
-    - index.html (single page that accesses the code from src to render the website)
-    - package-lock.json (contains info about dependencies and versions)
-    - package.json (contains info about dependencies and versions)
-    - README.md (readme file)
-    - server.js (hosts a MySQL connection using a server at port 3001 to communicate with a local database)
-    - StartApp.bat (launches both the MySQL server and the frontend website)
-    - vite.config.js (vite configuration)
+CardApp/
+├─ node_modules/
+├─ src/  #where all the logic is stored
+│  ├─ AdminPanel.jsx  #frontend for admins
+│  ├─ App.css
+│  ├─ App.jsx
+│  ├─ CardApp.jsx  #frontend for users
+│  ├─ global.css  #css for AdminPanel, CardApp, and LoginPage
+│  ├─ index.css
+│  ├─ LoginPage.jsx  #frontend for login
+│  ├─ main.jsx
+│  ├─ server.js  #backend
+.gitignore
+eslint.config.js
+index.html
+package-lock.json
+package.json
+README.md
+StartApp.bat
+vite.config.js
+
 
 Challenges:
 - Data persistance was tricky, but I was able to use the SQL modules to work out how to create a local database.
 - Many animations were buggy but I powered through the React logic to make them work.
 - I faced several issues with aligning items using CSS but I employed the use of different styling methods to make everything seamless.
+- Having persistent logins and tokens was an issue as the lectures were all about connecting JWT to FastAPI, which I was not using. However, I was able to implement my own version of tokens, taking a live-generated unique number from the server to verify if accounts were used in the same session.
 
 
 This app requires a localhost MySQL service with credentials root/root. Other dependencies can be found in package.json.
