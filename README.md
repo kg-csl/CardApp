@@ -19,6 +19,7 @@ Features:
 - Sites will automatically reroute you to relevant pages depending on whether you are logged in as a user or admin.
 
 Folder structure:
+```
 CardApp/
 ├─ node_modules/
 ├─ src/  #where all the logic is stored
@@ -39,6 +40,7 @@ CardApp/
 ├─ README.md
 ├─ StartApp.bat  #launches both the frontend and backend
 ├─ vite.config.js
+```
 
 
 Challenges:
