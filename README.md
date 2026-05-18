@@ -1,5 +1,4 @@
-**Flashcard Express**
-A simple, modern flashcards application to assist students.
+**Flashcard Express**: a simple, modern flashcards application to assist students.
 
 This app allows you to create a set of flashcards, each with a question and answer. You can use them as memory aids or for study help. Flashcards can be shuffled, edited, deleted, and repositioned at will.
 
@@ -23,23 +22,23 @@ Folder structure:
 ```
 CardApp/
 ├─ node_modules/
-├─ src/  ```where all the logic is stored```
-|   ├─ AdminPanel.jsx  ```frontend for admins```
+├─ src/  (where all the logic is stored)
+|   ├─ AdminPanel.jsx  (frontend for admins)
 |   ├─ App.css
 |   ├─ App.jsx
-|   ├─ CardApp.jsx  ```frontend for users```
-|   ├─ global.css  ```css for AdminPanel, CardApp, and LoginPage```
+|   ├─ CardApp.jsx  (frontend for users)
+|   ├─ global.css  (css for AdminPanel, CardApp, and LoginPage)
 |   ├─ index.css
-|   ├─ LoginPage.jsx  ```frontend for login```
+|   ├─ LoginPage.jsx  (frontend for login)
 |   ├─ main.jsx
-|   ├─ server.js  ```backend```
+|   ├─ server.js  (backend)
 ├─ .gitignore
 ├─ eslint.config.js
 ├─ index.html
 ├─ package-lock.json
 ├─ package.json
 ├─ README.md
-├─ StartApp.bat  ```launches both the frontend and backend```
+├─ StartApp.bat  (launches both the frontend and backend)
 ├─ vite.config.js
 ```
 
