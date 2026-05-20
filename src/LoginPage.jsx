@@ -136,16 +136,18 @@ export default function LoginPage() {
 			if (user && token) { // if user/token isn't null, verify its validity
 				let found = false;
 				data.map(account => {
-					if (!found && account.username == user) fetch(`http://localhost:3001/api/token`) // if username exists, check token
-					.then(response => response.json())
-					.then(result => {
+					if (!found && account.username == user) {
 						found = true;
-						if (result.token == token) window.location.href = `/${account.admin == 1 ? 'admin' : 'user'}`; // redirect
-						else {
-							localStorage.setItem('flashcardUser', null);
-							localStorage.setItem('flashcardToken', null);
-						}
-					})
+						fetch(`http://localhost:3001/api/token`) // if username exists, check token
+						.then(resp => resp.json())
+						.then(result => {
+							if (result.token == token) window.location.href = `/${account.admin == 1 ? 'admin' : 'user'}`; // redirect
+							else {
+								localStorage.setItem('flashcardUser', null);
+								localStorage.setItem('flashcardToken', null);
+							}
+						})
+					}
 				})
 				if (!found) {
 					localStorage.setItem('flashcardUser', null);

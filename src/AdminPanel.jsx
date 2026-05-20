@@ -37,7 +37,7 @@ export default function AdminPanel() {
 	let defaultSize = 30;
 	let disableMain = false;
 
-	useEffect(() => { // automatically sign users in, or redirect to login page
+	useEffect(() => { // automatically sign users in or redirect to login page
 		if (admin == null) {
 			const storedToken = localStorage.getItem('flashcardToken');
 			const storedUser = localStorage.getItem('flashcardUser');
