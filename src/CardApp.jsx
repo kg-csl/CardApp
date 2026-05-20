@@ -13,24 +13,24 @@ export default function CardApp() {
 		flipped: false
 	});
 
-	const [freeze, setFreeze] = useState(false);
+	const [freeze, setFreeze] = useState(false); // when true, locks certain buttons to prevent bugs
 	const [textFade, setTextFade] = useState(1); // -1/1: fadeOut/In, -2/2: leftOut/In, -3/3, rightOut/In
 
-	const [isModal, setModal] = useState(false);
-	const [isError, setError] = useState(false);
-	const [askDelete, setDelete] = useState(-1);
+	const [isModal, setModal] = useState(false); // add card modal
+	const [isError, setError] = useState(false); // error modal
+	const [askDelete, setDelete] = useState(-1); // delete confirmation modal
 	const [modalFade, setModalFade] = useState(false);
 	const [input, setInput] = useState({
 		question: '',
 		answer: ''
 	});
-	const [cardEdit, setEdit] = useState(0);
+	const [cardEdit, setEdit] = useState(0); // edit card modal
 
-	let defaultSize = 30;
-	let disableMain = false;
+	let defaultSize = 30; // default text size for main card
+	let disableMain = false; // when true, disables the main card's flipping capabilities
 
 	useEffect(() => { // automatically sign users in, or redirect to login page
-		if (user == null) {
+		if (user == null) { // if the stored user is null, check localStorage for tokens
 			const storedToken = localStorage.getItem('flashcardToken');
 			const storedUser = localStorage.getItem('flashcardUser');
 			if (!storedToken || !storedUser) window.location.href = `/`; // no user data means send to login page
@@ -68,14 +68,14 @@ export default function CardApp() {
 		}
 	}, []);
 
-	const updateCards = (username) => { 
+	const updateCards = (username) => { // get flashcards belonging to the user from the backend
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(response => response.json())
 		.then(data => {
 		let tempCards = [];
 		data.map(d => {
-			if (d.username == username) tempCards.push(d);
+			if (d.username == username) tempCards.push(d); // filter by username
 		})
 		setCards(tempCards);
 		if (tempCards.length == 0) {
@@ -90,7 +90,7 @@ export default function CardApp() {
 		});
 	};
 
-	const newEntry = (pos, card) => {
+	const newEntry = (pos, card) => { // create a card
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'POST', headers: {'Content-Type':'application/json'},
 		body: JSON.stringify({
@@ -107,7 +107,7 @@ export default function CardApp() {
 		});
 	}
 
-	const editEntry = (card) => {
+	const editEntry = (card) => { // edit an existing card
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'POST', headers: {'Content-Type':'application/json'},
 		body: JSON.stringify({
@@ -123,7 +123,7 @@ export default function CardApp() {
 		});
 	}
 
-	const deleteEntry = (i, p) => {
+	const deleteEntry = (i, p) => { // delete cards
 		if ((i == activeCard.id && cards.length > 1)) {
 			const index = cards.findIndex(card => card.id == i);
 			if (cards.length - 1 == index) {
@@ -147,7 +147,7 @@ export default function CardApp() {
 		});
 	}
 
-	const moveEntry = (i, p, q) => {
+	const moveEntry = (i, p, q) => { // edit a card's position value
 		if (activeCard.id == i) {
 			setActiveCard({...activeCard, position: p});
 		}
@@ -201,7 +201,7 @@ export default function CardApp() {
 		}
 	};
 
-	const shuffleEntry = (i) => { // for each card, pick a random number and swap positions with picked number
+	const shuffleEntry = (i) => { // assign a random position to each card
 		const newPos = Math.round(Math.random() * (cards.length - 1) + 1);
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'GET', headers: {'Content-Type':'application/json'}})
@@ -254,7 +254,7 @@ export default function CardApp() {
 		else return [null, 'fadeOut', 'fadeOutLeft', 'fadeOutRight'][-textFade];
 	}
 
-	const nextCard = (forward) => {
+	const nextCard = (forward) => { // click on arrows to move through cards
 		if (!freeze) {
 		setFreeze(true);
 		setTextFade(forward ? -2 : -3);
@@ -273,7 +273,7 @@ export default function CardApp() {
 		}
 	}
 
-	const jumpCard = (card) => {
+	const jumpCard = (card) => { // click directly on a card to jump to it
 		if (textFade > 0 && !freeze && !disableMain && card.id != activeCard.id) {
 		setFreeze(true);
 		setTextFade(-1);
@@ -290,7 +290,7 @@ export default function CardApp() {
 		}
 	};
 
-	const handleCreate = () => { // code that runs when you click Add or Save Card
+	const handleCreate = () => { // logic for adding or editing a card
 		if (input.question != '' && input.answer != '') {
 		if (cardEdit != 0) {
 			const newCard = {
@@ -369,7 +369,7 @@ export default function CardApp() {
 		}
 	};
 
-	const logout = () => {
+	const logout = () => { // redirect user and clear localStorage
 		localStorage.setItem('flashcardToken', null);
 		localStorage.setItem('flashcardUser', null);
 		window.location.href = `/`;
@@ -421,16 +421,16 @@ export default function CardApp() {
 				}
 			}} className='active-box'>
 				<div style={{ display: `flex`, justifyContent: `space-between`, alignItems: `center`, minHeight: `20em`, maxHeight: `20em`}}>
-				<button onClick={() => nextCard(false)}
-				onMouseEnter={() => disableMain = true} 
+				<button onClick={() => nextCard(false)} // move to the previous card
+				onMouseEnter={() => disableMain = true} // prevent flipping the main card when hovering over the arrows
 				onMouseLeave={() => disableMain = false}
 				className="edit-button" disabled={freeze || activeCard.position == 1}>
 					<CircleChevronLeft size={30} />
 				</button>
 				<p className={`main-text ${calcFade()}`}>
-					{activeCard.flipped ? activeCard.answer : activeCard.question}
+					{activeCard.flipped ? activeCard.answer : activeCard.question} 
 				</p>
-				<button onClick={() => nextCard(true)}
+				<button onClick={() => nextCard(true)} // move to the next card
 				onMouseEnter={() => disableMain = true} 
 				onMouseLeave={() => disableMain = false}
 				className="edit-button" disabled={freeze || activeCard.position == cards.length}>
@@ -443,7 +443,7 @@ export default function CardApp() {
 				<div style={{ padding: `0rem`, transform: `translate(0px, -20px)`}}>
 				{`${activeCard.position} / ${cards.length}`}
 				</div>
-			</div>
+			</div> 
 			)}
 
 			<div className="card-list">
@@ -494,7 +494,7 @@ export default function CardApp() {
 			</div>
 		</div>
 
-		{isModal && ( // handle pop-up display
+		{isModal && ( // handle modals
 			<div className={`modal-overlay ${modalFade ? 'fadeIn' : 'fadeOut'}`}>
 			{isError ? ( // error message
 			<div className="modal">

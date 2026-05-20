@@ -12,7 +12,7 @@ export default function LoginPage() {
 	const [password, setPassword] = useState('');
 
 	useEffect(() => {
-		updateAccounts(); // refresh accounts on page reload
+		updateAccounts(localStorage.getItem('flashcardUser'), localStorage.getItem('flashcardToken')); // refresh accounts on page reload, and redirect if already logged in
 	}, []);
 
 	const checkPass = (passkey, admin) => { // decrypt stored password and check it against typed password
@@ -22,7 +22,7 @@ export default function LoginPage() {
 		.then(data => {
 			key = data.key;
 			const splitPass = password.split('');
-			const codedPass = splitPass.map(s => s.charCodeAt(0) * key);
+			const codedPass = splitPass.map(s => s.charCodeAt(0) * key); // encryption formula is charcode * hash
 			if (codedPass.join(',') != passkey) {
 				setError('Username/password incorrect.');
 				setLoading(false);
@@ -40,7 +40,7 @@ export default function LoginPage() {
 	const handleSubmit = () => {
 		setLoading(true);
 		if (username && password) {
-			if (register) {
+			if (register) { // creating an account
 				let free = true; // first check if username is unique
 				accounts.map(acc => {
 					if (acc.username == username) {
@@ -55,7 +55,7 @@ export default function LoginPage() {
 					}
 				})
 				if (free) {
-					if (password.length > 30) {
+					if (password.length > 30) { // length constraints
 						setError('Passwords cannot be longer than 30 characters.');
 						setLoading(false);
 					}
@@ -90,11 +90,11 @@ export default function LoginPage() {
 					}
 				}
 			}
-			else {
+			else { // logging into pre-existing account
 				let found = 0;
 				let passkey = '';
 				accounts.map(acc => {
-					if (acc.username == username) {
+					if (acc.username == username) { // check for username matches in the account database
 						if (acc.deleted == 1) found = -1;
 						else if (acc.admin == 1) {
 							found = 2;
@@ -116,7 +116,7 @@ export default function LoginPage() {
 						setLoading(false);
 						break;
 					case 1:
-						checkPass(passkey, false);
+						checkPass(passkey, false); // checkPass will decrypt the password
 						break;
 					case 2:
 						checkPass(passkey, true);
@@ -133,14 +133,14 @@ export default function LoginPage() {
 		.then(response => response.json())
 		.then(data => {
 			setAccounts(data);
-			if (user && token) {
+			if (user && token) { // if user/token isn't null, verify its validity
 				let found = false;
 				data.map(account => {
-					if (!found && account.username == user) fetch(`http://localhost:3001/api/token`)
+					if (!found && account.username == user) fetch(`http://localhost:3001/api/token`) // if username exists, check token
 					.then(response => response.json())
 					.then(result => {
 						found = true;
-						if (result.token == token) window.location.href = `/${account.admin == 1 ? 'admin' : 'user'}`;
+						if (result.token == token) window.location.href = `/${account.admin == 1 ? 'admin' : 'user'}`; // redirect
 						else {
 							localStorage.setItem('flashcardUser', null);
 							localStorage.setItem('flashcardToken', null);

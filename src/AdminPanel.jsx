@@ -12,8 +12,8 @@ export default function AdminPanel() {
 		log_question: '',
 		log_answer: ''
 	}]);
-	const [target, setTarget] = useState('');
-	const [cards, setCards] = useState([]);
+	const [target, setTarget] = useState(''); // focused user
+	const [cards, setCards] = useState([]); // cards of focused user
 	const [activeCard, setActiveCard] = useState({
 		id: 0,
 		question: '',
@@ -21,7 +21,7 @@ export default function AdminPanel() {
 		position: 0,
 		flipped: false
 	});
-	const [spotlight, setSpotlight] = useState({
+	const [spotlight, setSpotlight] = useState({ // holds data for peeked cards
 		question: '',
 		answer: '',
 		state: ''
@@ -78,7 +78,7 @@ export default function AdminPanel() {
 		}
 	}, []);
 
-	const updateCards = (user) => { 
+	const updateCards = (user) => { // get cards of focused user
 		setFreeze(true);
 		fetch(`http://localhost:3001/api/cards`, {
 		method: 'GET', headers: {'Content-Type':'application/json'}})
@@ -109,7 +109,7 @@ export default function AdminPanel() {
 		});
 	};
 
-	const updateLogs = () => { 
+	const updateLogs = () => { // populate logs with data from the backend
 		fetch(`http://localhost:3001/api/logs`, {method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(response => response.json())
 		.then(data => {
@@ -151,7 +151,7 @@ export default function AdminPanel() {
 		}
 	}
 
-	const peek = (log) => {
+	const peek = (log) => { // modal that shows a card, and whether it's been deleted or edited
 		fetch(`http://localhost:3001/api/cards`, {method: 'GET', headers: {'Content-Type':'application/json'}})
 		.then(response => response.json())
 		.then(data => {
@@ -215,7 +215,7 @@ export default function AdminPanel() {
 				<p className="header-subtitle">Targeted user has no active flashcards.</p>
 			</div>
 			) : (
-			<div onClick={() => { // click anywhere on this div to flip question/answer
+			<div onClick={() => { // this will show the focused user's active cards
 				if (textFade > 0 && !freeze && !disableMain) {
 				setFreeze(true);
 				setTextFade(-1);
@@ -259,7 +259,7 @@ export default function AdminPanel() {
 		</div>
 
 		<div className="card-list">
-		<div className="input-section">
+		<div className="input-section" /* this section is for logs instead of cards */>
 			<input className="filter" style={{ padding: '0rem', textAlign: 'left' }} type="text" id="filterInput" placeholder="Type here to filter logs by username..." onInput={updateLogs}/>
 		</div>
 		{logs.length != 0 && <ul className="card-items">
@@ -268,7 +268,7 @@ export default function AdminPanel() {
 				if (document.getElementById('filterInput')) if(document.getElementById('filterInput').value != '' && !log.username.toLowerCase().includes(document.getElementById('filterInput').value)) return; // filter using username
 				let time = '';
 				let minutes = Math.round((Date.now() - log.timestamp) / 60000);
-				if (minutes == 0) {
+				if (minutes == 0) { // display relative to current Date.now()
 					time = 'Just now';
 				}
 				else if (minutes < 60) {
@@ -281,7 +281,7 @@ export default function AdminPanel() {
 					time = Math.round(minutes / 1440) + 'd ago';
 				}
 				let message = 'User ' + log.username;
-				switch (log.type) {
+				switch (log.type) { // different types of log
 					case 'creation':
 						message += ` created card with ID ${log.log_id}.`;
 						break;
